@@ -335,7 +335,7 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val ringtoneUri = customRingtoneUri ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
             
-            // Incoming calls channel (high priority with sound)
+            // Incoming calls channel (high priority with controlled sound)
             val incomingChannel = NotificationChannel(
                 CALL_NOTIFICATION_CHANNEL_ID,
                 "Incoming Calls",
@@ -347,12 +347,10 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 1000, 500, 1000)
                 
-                // Set audio attributes for ringtone
-                val audioAttributes = AudioAttributes.Builder()
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                    .build()
-                setSound(ringtoneUri, audioAttributes)
+                // CRITICAL FIX: Disable notification channel sound for ALL devices to prevent double ringtone
+                // We handle ringtone playback manually for better control and consistent behavior
+                setSound(null, null)
+                Log.d(TAG, "Notification channel sound disabled for ALL devices to prevent double ringtone")
                 
                 // Respect Do Not Disturb settings - let user control this in system settings
                 setBypassDnd(false)
@@ -376,7 +374,7 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             
             notificationManager.createNotificationChannel(incomingChannel)
             notificationManager.createNotificationChannel(ongoingChannel)
-            Log.d(TAG, "Notification channels created: incoming and ongoing calls")
+            Log.d(TAG, "Notification channels created: incoming and ongoing calls with unified sound handling")
         }
     }
     
@@ -459,10 +457,9 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             // Acquire wake lock for call
             acquireCallWakeLock()
             
-            // Start playing ringtone immediately for MIUI/EMUI devices
-            if (isCustomChineseRom()) {
-                startRingtonePlayback()
-            }
+            // Start manual ringtone playback for better control across all devices
+            // This ensures consistent behavior and prevents double ringtone on custom ROMs
+            startRingtonePlayback()
             
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 // Use CallStyle for Android 12 and above
@@ -617,10 +614,9 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             
         // Add sound and vibration for older Android versions (respecting system settings)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            // Only add sound if system allows ringtone
-            if (shouldPlayRingtone()) {
-                notificationBuilder.setSound(ringtoneUri, AudioManager.STREAM_RING)
-            }
+            // CRITICAL FIX: Disable notification sound for ALL Android versions to prevent double playback
+            // Manual ringtone handling provides better control across all devices and API levels
+            notificationBuilder.setSound(null)
             
             // Only add vibration if system allows vibration
             if (shouldVibrate()) {
@@ -896,7 +892,8 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         stopCallDurationTimer()
     }
     
-    // Helper methods for custom ROM detection
+    // Helper methods for custom ROM detection (for informational purposes only)
+    // Note: These methods are no longer used for ringtone control as we now use unified ringtone handling
     private fun isCustomChineseRom(): Boolean {
         val manufacturer = Build.MANUFACTURER.lowercase()
         return manufacturer in listOf("xiaomi", "redmi", "poco", "huawei", "honor", "oppo", "vivo", "realme", "oneplus")
@@ -1125,7 +1122,7 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         wakeLock = null
     }
     
-    // Enhanced ringtone playback for custom ROMs
+    // Enhanced ringtone playback for consistent behavior across all devices
     private fun startRingtonePlayback() {
         try {
             // Check if ringtone should be played based on system settings
@@ -1139,39 +1136,41 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             
             val ringtoneUri = customRingtoneUri ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
             
-            // For MIUI/EMUI, use MediaPlayer for better control
-            if (isCustomChineseRom()) {
-                mediaPlayer = MediaPlayer().apply {
-                    setAudioAttributes(
-                        AudioAttributes.Builder()
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                            .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                            .setLegacyStreamType(AudioManager.STREAM_RING)
-                            .build()
-                    )
-                    
-                    // Set data source and prepare
-                    setDataSource(context, ringtoneUri)
-                    isLooping = true
-                    
-                    // Don't override user's volume settings - respect current volume level
-                    prepare()
-                    start()
-                    
-                    Log.d(TAG, "MediaPlayer ringtone started for ${Build.MANUFACTURER} (respecting system volume)")
-                }
-            } else {
-                // Use standard Ringtone for other devices
+            // Use MediaPlayer for ALL devices for consistent behavior and better control
+            mediaPlayer = MediaPlayer().apply {
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                        .setLegacyStreamType(AudioManager.STREAM_RING)
+                        .build()
+                )
+                
+                // Set data source and prepare
+                setDataSource(context, ringtoneUri)
+                isLooping = true
+                
+                // Respect current system volume level - don't override user settings
+                prepare()
+                start()
+                
+                Log.d(TAG, "MediaPlayer ringtone started for ${Build.MANUFACTURER} API ${Build.VERSION.SDK_INT} (respecting system volume)")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error starting ringtone: ${e.message}")
+            // Fallback to standard Ringtone if MediaPlayer fails
+            try {
+                val ringtoneUri = customRingtoneUri ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
                 ringtone = RingtoneManager.getRingtone(context, ringtoneUri).apply {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                         isLooping = true
                     }
                     play()
-                    Log.d(TAG, "Standard ringtone started (respecting system volume)")
+                    Log.d(TAG, "Fallback standard ringtone started (respecting system volume)")
                 }
+            } catch (fallbackException: Exception) {
+                Log.e(TAG, "Both MediaPlayer and standard Ringtone failed: ${fallbackException.message}")
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error starting ringtone: ${e.message}")
         }
     }
     
