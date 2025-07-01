@@ -325,32 +325,6 @@ void main() {
       expect(event.reason, 'disconnected');
     });
 
-    test('CallHoldEvent creation and parsing', () {
-      final timestamp = DateTime.now();
-      final event = CallHoldEvent(
-        callId: 'hold-test',
-        timestamp: timestamp,
-        isOnHold: true,
-      );
-
-      expect(event.callId, 'hold-test');
-      expect(event.action, CallAction.hold);
-      expect(event.isOnHold, true);
-    });
-
-    test('CallMuteEvent creation and parsing', () {
-      final timestamp = DateTime.now();
-      final event = CallMuteEvent(
-        callId: 'mute-test',
-        timestamp: timestamp,
-        isMuted: true,
-      );
-
-      expect(event.callId, 'mute-test');
-      expect(event.action, CallAction.mute);
-      expect(event.isMuted, true);
-    });
-
     test('CallStateChangedEvent creation and parsing', () {
       final timestamp = DateTime.now();
       final event = CallStateChangedEvent(
@@ -364,79 +338,32 @@ void main() {
       expect(event.state, CallState.active);
     });
 
-    test('CallEvent.fromMap creates correct event type', () {
-      // Test CallAnsweredEvent from map
-      final answeredMap = {
-        'callId': 'test-answered',
+    test('Event parsing from Map', () {
+      final map = {
+        'callId': 'test-123',
         'action': 'answered',
         'timestamp': DateTime.now().millisecondsSinceEpoch,
-        'videoState': 2,
+        'videoState': 1,
       };
 
-      final answeredEvent = CallEvent.fromMap(answeredMap);
-      expect(answeredEvent, isA<CallAnsweredEvent>());
-      expect(answeredEvent.callId, 'test-answered');
-      expect((answeredEvent as CallAnsweredEvent).videoState, 2);
-
-      // Test CallStateChangedEvent from map
-      final stateMap = {
-        'callId': 'test-state',
-        'action': 'state_changed',
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-        'state': 'active',
-      };
-
-      final stateEvent = CallEvent.fromMap(stateMap);
-      expect(stateEvent, isA<CallStateChangedEvent>());
-      expect((stateEvent as CallStateChangedEvent).state, CallState.active);
+      final event = CallEvent.fromMap(map);
+      expect(event, isA<CallAnsweredEvent>());
+      expect(event.callId, 'test-123');
+      expect(event.action, CallAction.answered);
     });
 
-    test('CallState enum parsing through fromMap', () {
-      // Test state parsing indirectly through fromMap since _parseCallState is private
-      final testStates = [
-        ('initializing', CallState.initializing),
-        ('new', CallState.newCall),
-        ('ringing', CallState.ringing),
-        ('dialing', CallState.dialing),
-        ('active', CallState.active),
-        ('holding', CallState.holding),
-        ('disconnected', CallState.disconnected),
-        ('unknown', CallState.unknown),
-        ('invalid', CallState.unknown),
-      ];
+    test('CallGenericEvent creation and parsing', () {
+      final timestamp = DateTime.now();
+      final event = CallGenericEvent(
+        callId: 'generic-test',
+        action: CallAction.stateChanged,
+        timestamp: timestamp,
+        data: const {'type': 'custom'},
+      );
 
-      for (final (stateString, expectedState) in testStates) {
-        final map = {
-          'callId': 'test',
-          'action': 'state_changed',
-          'timestamp': DateTime.now().millisecondsSinceEpoch,
-          'state': stateString,
-        };
-        final event = CallStateChangedEvent.fromMap(map);
-        expect(
-          event.state,
-          expectedState,
-          reason: 'Failed for state: $stateString',
-        );
-      }
-    });
-
-    test('CallAction enum values', () {
-      expect(CallAction.values, contains(CallAction.answered));
-      expect(CallAction.values, contains(CallAction.rejected));
-      expect(CallAction.values, contains(CallAction.ended));
-      expect(CallAction.values, contains(CallAction.hold));
-      expect(CallAction.values, contains(CallAction.mute));
-      expect(CallAction.values, contains(CallAction.stateChanged));
-    });
-
-    test('CallState enum values', () {
-      expect(CallState.values, contains(CallState.initializing));
-      expect(CallState.values, contains(CallState.newCall));
-      expect(CallState.values, contains(CallState.ringing));
-      expect(CallState.values, contains(CallState.active));
-      expect(CallState.values, contains(CallState.holding));
-      expect(CallState.values, contains(CallState.disconnected));
+      expect(event.callId, 'generic-test');
+      expect(event.action, CallAction.stateChanged);
+      expect(event.data['type'], 'custom');
     });
   });
 

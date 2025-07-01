@@ -748,7 +748,7 @@ class _CustomizationDemoScreenState extends State<CustomizationDemoScreen> {
   void _applyGlobalConfiguration() async {
     try {
       final config = _getCurrentConfiguration();
-      await _vCallkitPlugin.setUIConfiguration(config);
+      await _vCallkitPlugin.setUIConfigurationFromMap(config);
 
       if (!mounted) return;
 

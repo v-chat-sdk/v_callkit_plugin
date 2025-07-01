@@ -10,16 +10,12 @@ enum CallState {
   unknown,
 }
 
-/// Represents different types of call actions
+/// Represents different types of call actions (simplified - removed hold and mute)
 enum CallAction {
   answered,
   rejected,
   ended,
   aborted,
-  hold,
-  unhold,
-  mute,
-  unmute,
   stateChanged,
 }
 
@@ -61,12 +57,6 @@ abstract class CallEvent {
       case CallAction.ended:
       case CallAction.aborted:
         return CallEndedEvent.fromMap(map);
-      case CallAction.hold:
-      case CallAction.unhold:
-        return CallHoldEvent.fromMap(map);
-      case CallAction.mute:
-      case CallAction.unmute:
-        return CallMuteEvent.fromMap(map);
       case CallAction.stateChanged:
         return CallStateChangedEvent.fromMap(map);
     }
@@ -83,14 +73,6 @@ abstract class CallEvent {
         return CallAction.ended;
       case 'aborted':
         return CallAction.aborted;
-      case 'hold':
-        return CallAction.hold;
-      case 'unhold':
-        return CallAction.unhold;
-      case 'mute':
-        return CallAction.mute;
-      case 'unmute':
-        return CallAction.unmute;
       case 'state_changed':
         return CallAction.stateChanged;
       default:
@@ -109,14 +91,6 @@ abstract class CallEvent {
         return 'ended';
       case CallAction.aborted:
         return 'aborted';
-      case CallAction.hold:
-        return 'hold';
-      case CallAction.unhold:
-        return 'unhold';
-      case CallAction.mute:
-        return 'mute';
-      case CallAction.unmute:
-        return 'unmute';
       case CallAction.stateChanged:
         return 'state_changed';
     }
@@ -217,76 +191,6 @@ class CallEndedEvent extends CallEvent {
       'action': CallEvent._callActionToString(action),
       'timestamp': timestamp.millisecondsSinceEpoch,
       'reason': reason,
-      ...data,
-    };
-  }
-}
-
-/// Event fired when a call is put on hold or taken off hold
-class CallHoldEvent extends CallEvent {
-  /// Whether the call is currently on hold
-  final bool isOnHold;
-
-  const CallHoldEvent({
-    required super.callId,
-    required super.timestamp,
-    super.data = const {},
-    required this.isOnHold,
-  }) : super(action: CallAction.hold);
-
-  factory CallHoldEvent.fromMap(Map<String, dynamic> map) {
-    return CallHoldEvent(
-      callId: map['callId'] as String? ?? '',
-      timestamp: DateTime.fromMillisecondsSinceEpoch(
-        map['timestamp'] as int? ?? DateTime.now().millisecondsSinceEpoch,
-      ),
-      data: Map<String, dynamic>.from(map),
-      isOnHold: map['isOnHold'] as bool? ?? false,
-    );
-  }
-
-  @override
-  Map<String, dynamic> toMap() {
-    return {
-      'callId': callId,
-      'action': CallEvent._callActionToString(action),
-      'timestamp': timestamp.millisecondsSinceEpoch,
-      'isOnHold': isOnHold,
-      ...data,
-    };
-  }
-}
-
-/// Event fired when a call is muted or unmuted
-class CallMuteEvent extends CallEvent {
-  /// Whether the call is currently muted
-  final bool isMuted;
-
-  const CallMuteEvent({
-    required super.callId,
-    required super.timestamp,
-    super.data = const {},
-    required this.isMuted,
-  }) : super(action: CallAction.mute);
-
-  factory CallMuteEvent.fromMap(Map<String, dynamic> map) {
-    return CallMuteEvent(
-      callId: map['callId'] as String? ?? '',
-      timestamp: DateTime.fromMillisecondsSinceEpoch(
-        map['timestamp'] as int? ?? DateTime.now().millisecondsSinceEpoch,
-      ),
-      data: Map<String, dynamic>.from(map),
-      isMuted: map['isMuted'] as bool? ?? false,
-    );
-  }
-
-  @override
-  Map<String, dynamic> toMap() {
-    return {
-      'callId': callId,
-      'action': CallEvent._callActionToString(action),
-      'timestamp': timestamp.millisecondsSinceEpoch,
-      'isMuted': isMuted,
       ...data,
     };
   }

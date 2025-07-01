@@ -9,6 +9,12 @@ import android.app.Person
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.drawable.Icon
 import android.media.AudioAttributes
 import android.media.AudioManager
@@ -27,12 +33,17 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.IconCompat
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
+import java.io.InputStream
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.UUID
+import kotlin.math.min
 
 /** VCallkitPlugin */
 class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
@@ -253,12 +264,6 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             "rejectCall" -> {
                 handleRejectCall(call, result)
             }
-            "muteCall" -> {
-                handleMuteCall(call, result)
-            }
-            "holdCall" -> {
-                handleHoldCall(call, result)
-            }
             "isCallActive" -> {
                 result.success(CallConnectionManager.hasActiveCall())
             }
@@ -461,12 +466,15 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             // This ensures consistent behavior and prevents double ringtone on custom ROMs
             startRingtonePlayback()
             
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                // Use CallStyle for Android 12 and above
-                showCallStyleNotification(callData, result)
-            } else {
-                // Use regular notification for older Android versions
-                showLegacyCallNotification(callData, result)
+            // Load avatar asynchronously and show notification
+            loadAvatarAsync(callData) { avatarIcon ->
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    // Use CallStyle for Android 12 and above
+                    showCallStyleNotification(callData, result, avatarIcon)
+                } else {
+                    // Use regular notification for older Android versions
+                    showLegacyCallNotification(callData, result, avatarIcon)
+                }
             }
             
         } catch (e: Exception) {
@@ -477,12 +485,203 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         }
     }
     
+    /**
+     * Load avatar image asynchronously from URL or generate from initials
+     * Executes callback with the resulting Icon (Android 7+) or null for older versions
+     */
+    private fun loadAvatarAsync(callData: CallData, callback: (Icon?) -> Unit) {
+        // For Android versions below 7.0, Icon class is not available
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+            callback(null)
+            return
+        }
+        
+        Thread {
+            try {
+                val avatarIcon = if (!callData.callerAvatar.isNullOrEmpty()) {
+                    // Try to load avatar from URL
+                    loadAvatarFromUrl(callData.callerAvatar!!) ?: generateInitialsAvatar(callData.callerName)
+                } else {
+                    // Generate avatar from initials
+                    generateInitialsAvatar(callData.callerName)
+                }
+                
+                // Execute callback on main thread
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    callback(avatarIcon)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading avatar: ${e.message}")
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    callback(generateInitialsAvatar(callData.callerName))
+                }
+            }
+        }.start()
+    }
+    
+    /**
+     * Load avatar image from URL
+     * Returns Icon for Android 7+ or null if loading fails
+     */
+    private fun loadAvatarFromUrl(avatarUrl: String): Icon? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return null
+        
+        return try {
+            Log.d(TAG, "Loading avatar from URL: $avatarUrl")
+            
+            val url = URL(avatarUrl)
+            val connection = url.openConnection() as HttpURLConnection
+            connection.connectTimeout = 5000 // 5 second timeout
+            connection.readTimeout = 10000 // 10 second timeout
+            connection.doInput = true
+            connection.connect()
+            
+            val inputStream: InputStream = connection.inputStream
+            val bitmap = BitmapFactory.decodeStream(inputStream)
+            inputStream.close()
+            connection.disconnect()
+            
+            if (bitmap != null) {
+                val circularBitmap = createCircularBitmap(bitmap)
+                Log.d(TAG, "Avatar loaded successfully from URL")
+                Icon.createWithBitmap(circularBitmap)
+            } else {
+                Log.w(TAG, "Failed to decode bitmap from URL")
+                null
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to load avatar from URL: ${e.message}")
+            null
+        }
+    }
+    
+    /**
+     * Generate circular avatar from user's initials
+     * Returns Icon for Android 7+ or null for older versions
+     */
+    private fun generateInitialsAvatar(name: String): Icon? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return null
+        
+        return try {
+            val initials = extractInitials(name)
+            val bitmap = createInitialsBitmap(initials)
+            val circularBitmap = createCircularBitmap(bitmap)
+            
+            Log.d(TAG, "Generated initials avatar for: $name -> $initials")
+            Icon.createWithBitmap(circularBitmap)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to generate initials avatar: ${e.message}")
+            null
+        }
+    }
+    
+    /**
+     * Extract initials from a person's name
+     */
+    private fun extractInitials(name: String): String {
+        val words = name.trim().split("\\s+".toRegex())
+        return when {
+            words.isEmpty() -> "?"
+            words.size == 1 -> words[0].take(2).uppercase()
+            else -> "${words.first().take(1)}${words.last().take(1)}".uppercase()
+        }
+    }
+    
+    /**
+     * Create a bitmap with initials text
+     */
+    private fun createInitialsBitmap(initials: String): Bitmap {
+        val size = 256 // Avatar size in pixels
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        
+        // Background color - use a gradient of colors based on initials
+        val backgroundColor = generateColorFromInitials(initials)
+        canvas.drawColor(backgroundColor)
+        
+        // Text paint
+        val textPaint = Paint().apply {
+            color = Color.WHITE
+            textSize = size * 0.4f // 40% of avatar size
+            textAlign = Paint.Align.CENTER
+            isAntiAlias = true
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+        }
+        
+        // Calculate text position (center)
+        val textBounds = Rect()
+        textPaint.getTextBounds(initials, 0, initials.length, textBounds)
+        val x = size / 2f
+        val y = size / 2f + textBounds.height() / 2f
+        
+        // Draw text
+        canvas.drawText(initials, x, y, textPaint)
+        
+        return bitmap
+    }
+    
+    /**
+     * Generate a consistent color from initials
+     */
+    private fun generateColorFromInitials(initials: String): Int {
+        val colors = intArrayOf(
+            Color.parseColor("#FF6B6B"), // Red
+            Color.parseColor("#4ECDC4"), // Teal
+            Color.parseColor("#45B7D1"), // Blue
+            Color.parseColor("#FFA07A"), // Light Salmon
+            Color.parseColor("#98D8C8"), // Mint
+            Color.parseColor("#F7DC6F"), // Yellow
+            Color.parseColor("#BB8FCE"), // Purple
+            Color.parseColor("#85C1E9"), // Light Blue
+            Color.parseColor("#F8C471"), // Orange
+            Color.parseColor("#82E0AA")  // Green
+        )
+        
+        val hash = initials.hashCode()
+        return colors[Math.abs(hash) % colors.size]
+    }
+    
+    /**
+     * Create a circular bitmap from any bitmap
+     */
+    private fun createCircularBitmap(bitmap: Bitmap): Bitmap {
+        val size = min(bitmap.width, bitmap.height)
+        val circularBitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(circularBitmap)
+        
+        // Create circular path
+        val paint = Paint().apply {
+            isAntiAlias = true
+        }
+        
+        val radius = size / 2f
+        canvas.drawCircle(radius, radius, radius, paint)
+        
+        // Use source bitmap as mask
+        paint.xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.SRC_IN)
+        
+        // Scale and center the original bitmap
+        val scaledBitmap = Bitmap.createScaledBitmap(bitmap, size, size, true)
+        canvas.drawBitmap(scaledBitmap, 0f, 0f, paint)
+        
+        return circularBitmap
+    }
+    
     @RequiresApi(Build.VERSION_CODES.S)
-    private fun showCallStyleNotification(callData: CallData, result: Result) {
-        // Create Person object for the caller
+    private fun showCallStyleNotification(callData: CallData, result: Result, avatarIcon: Icon?) {
+        // Create Person object for the caller with avatar
         val caller = Person.Builder()
             .setName(callData.callerName)
             .setImportant(true)
+            .apply {
+                // Add avatar if available (Android 7+ only)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && avatarIcon != null) {
+                    setIcon(avatarIcon)
+                    Log.d(TAG, "CallStyle notification: Avatar set for ${callData.callerName}")
+                } else {
+                    Log.d(TAG, "CallStyle notification: No avatar available for ${callData.callerName}")
+                }
+            }
             .build()
         
         // Create full-screen intent for incoming call
@@ -517,6 +716,13 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             .setContentTitle(callData.callerName)
             .setContentText(callData.callerNumber)
             .setSmallIcon(android.R.drawable.ic_menu_call)
+            .apply {
+                // Set large icon (avatar) if available
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && avatarIcon != null) {
+                    setLargeIcon(avatarIcon)
+                    Log.d(TAG, "CallStyle notification: Large icon (avatar) set")
+                }
+            }
             .setStyle(
                 Notification.CallStyle.forIncomingCall(caller, declinePendingIntent, answerPendingIntent)
             )
@@ -540,14 +746,14 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             // Start vibration manually for better control
             startCallVibration()
             
-            Log.d(TAG, "CallStyle notification shown for: ${callData.callerName}")
+            Log.d(TAG, "CallStyle notification shown for: ${callData.callerName} with avatar support")
             result.success(true)
         } else {
             result.error("NOTIFICATIONS_DISABLED", "Notifications are disabled for this app", null)
         }
     }
     
-    private fun showLegacyCallNotification(callData: CallData, result: Result) {
+    private fun showLegacyCallNotification(callData: CallData, result: Result, avatarIcon: Icon?) {
         // Create full-screen intent for incoming call
         val fullScreenIntent = createCallScreenIntent(callData)
         val fullScreenPendingIntent = PendingIntent.getActivity(
@@ -592,6 +798,23 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             .setContentTitle(callData.callerName)
             .setContentText(incomingCallText)
             .setSmallIcon(android.R.drawable.ic_menu_call)
+            .apply {
+                // Set large icon (avatar) if available (Android API 16+ supports large icons)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && avatarIcon != null) {
+                    // Convert Icon to Bitmap for NotificationCompat
+                    try {
+                        val bitmap = iconToBitmap(avatarIcon)
+                        if (bitmap != null) {
+                            setLargeIcon(bitmap)
+                            Log.d(TAG, "Legacy notification: Large icon (avatar) set for ${callData.callerName}")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to convert icon to bitmap: ${e.message}")
+                    }
+                } else {
+                    Log.d(TAG, "Legacy notification: No avatar available for ${callData.callerName}")
+                }
+            }
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setAutoCancel(false)
@@ -636,10 +859,38 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             // Start vibration manually for better control
             startCallVibration()
             
-            Log.d(TAG, "Legacy call notification shown for: ${callData.callerName}")
+            Log.d(TAG, "Legacy call notification shown for: ${callData.callerName} with avatar support")
             result.success(true)
         } else {
             result.error("NOTIFICATIONS_DISABLED", "Notifications are disabled for this app", null)
+        }
+    }
+    
+    /**
+     * Convert Icon to Bitmap for compatibility with NotificationCompat
+     * Used for legacy notifications on older Android versions
+     */
+    private fun iconToBitmap(icon: Icon): Bitmap? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return null
+        
+        return try {
+            val drawable = icon.loadDrawable(context)
+            if (drawable != null) {
+                val bitmap = Bitmap.createBitmap(
+                    drawable.intrinsicWidth,
+                    drawable.intrinsicHeight,
+                    Bitmap.Config.ARGB_8888
+                )
+                val canvas = Canvas(bitmap)
+                drawable.setBounds(0, 0, canvas.width, canvas.height)
+                drawable.draw(canvas)
+                bitmap
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to convert Icon to Bitmap: ${e.message}")
+            null
         }
     }
     
@@ -818,30 +1069,6 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             result.success(true)
         } else {
             result.error("NO_ACTIVE_CALL", "No active call to reject", null)
-        }
-    }
-    
-    private fun handleMuteCall(call: MethodCall, result: Result) {
-        val arguments = call.arguments as? Map<String, Any>
-        val callId = arguments?.get("callId") as? String
-        val isMuted = arguments?.get("isMuted") as? Boolean ?: false
-        
-        if (CallConnectionManager.muteCall(callId, isMuted)) {
-            result.success(true)
-        } else {
-            result.error("NO_ACTIVE_CALL", "No active call to mute/unmute", null)
-        }
-    }
-    
-    private fun handleHoldCall(call: MethodCall, result: Result) {
-        val arguments = call.arguments as? Map<String, Any>
-        val callId = arguments?.get("callId") as? String
-        val isOnHold = arguments?.get("isOnHold") as? Boolean ?: false
-        
-        if (CallConnectionManager.holdCall(callId, isOnHold)) {
-            result.success(true)
-        } else {
-            result.error("NO_ACTIVE_CALL", "No active call to hold/unhold", null)
         }
     }
     
@@ -1230,8 +1457,10 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             // Start the duration timer
             startCallDurationTimer()
             
-            // Show initial notification
-            updateOngoingCallNotification(0)
+            // Load avatar and show initial notification
+            loadAvatarAsync(callData) { avatarIcon ->
+                updateOngoingCallNotification(0, avatarIcon)
+            }
             
             Log.d(TAG, "Ongoing call notification shown successfully for: ${callData.callerName}")
         } catch (e: Exception) {
@@ -1249,19 +1478,27 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         callStartTime = System.currentTimeMillis()
         callDurationTimer = android.os.Handler(android.os.Looper.getMainLooper())
         
-        callDurationRunnable = object : Runnable {
-            override fun run() {
-                val durationSeconds = (System.currentTimeMillis() - callStartTime) / 1000
-                updateOngoingCallNotification(durationSeconds)
+        // Load avatar once and reuse it for timer updates
+        val callData = currentOngoingCallData
+        if (callData != null) {
+            loadAvatarAsync(callData) { avatarIcon ->
+                callDurationRunnable = object : Runnable {
+                    override fun run() {
+                        val durationSeconds = (System.currentTimeMillis() - callStartTime) / 1000
+                        updateOngoingCallNotification(durationSeconds, avatarIcon)
+                        
+                        // Schedule next update in 1 second
+                        callDurationTimer?.postDelayed(this, 1000)
+                    }
+                }
                 
-                // Schedule next update in 1 second
-                callDurationTimer?.postDelayed(this, 1000)
+                // Start the timer
+                callDurationRunnable?.let { callDurationTimer?.post(it) }
+                Log.d(TAG, "Call duration timer started with avatar support")
             }
+        } else {
+            Log.e(TAG, "Cannot start duration timer: no current call data")
         }
-        
-        // Start the timer
-        callDurationRunnable?.let { callDurationTimer?.post(it) }
-        Log.d(TAG, "Call duration timer started")
     }
     
     /**
@@ -1298,17 +1535,17 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
      * - Android 8-11: Legacy notifications with foreground service association
      * - Android 7 and below: Basic persistent notifications
      */
-    private fun updateOngoingCallNotification(durationSeconds: Long) {
+    private fun updateOngoingCallNotification(durationSeconds: Long, avatarIcon: Icon? = null) {
         val callData = currentOngoingCallData ?: return
         
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 // Use CallStyle for ongoing call in Android 12+ (API 31+)
-                showOngoingCallStyleNotification(callData, durationSeconds)
+                showOngoingCallStyleNotification(callData, durationSeconds, avatarIcon)
                 Log.d(TAG, "Updated CallStyle notification with duration: ${formatCallDuration(durationSeconds)}")
             } else {
                 // Use regular ongoing notification for Android 11 and below
-                showLegacyOngoingCallNotification(callData, durationSeconds)
+                showLegacyOngoingCallNotification(callData, durationSeconds, avatarIcon)
                 Log.d(TAG, "Updated legacy notification with duration: ${formatCallDuration(durationSeconds)}")
             }
         } catch (e: Exception) {
@@ -1318,11 +1555,18 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
     }
     
     @RequiresApi(Build.VERSION_CODES.S)
-    private fun showOngoingCallStyleNotification(callData: CallData, durationSeconds: Long) {
-        // Create Person object for the caller
+    private fun showOngoingCallStyleNotification(callData: CallData, durationSeconds: Long, avatarIcon: Icon? = null) {
+        // Create Person object for the caller with avatar
         val caller = Person.Builder()
             .setName(callData.callerName)
             .setImportant(true)
+            .apply {
+                // Add avatar if available (Android 7+ only)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && avatarIcon != null) {
+                    setIcon(avatarIcon)
+                    Log.d(TAG, "Ongoing CallStyle notification: Avatar set for ${callData.callerName}")
+                }
+            }
             .build()
         
         // Create hang up action
@@ -1361,6 +1605,13 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             .setContentText("$callTypeText $ongoingText • $durationText")
             .setSubText(tapToReturnText)
             .setSmallIcon(android.R.drawable.ic_menu_call)
+            .apply {
+                // Set large icon (avatar) if available
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && avatarIcon != null) {
+                    setLargeIcon(avatarIcon)
+                    Log.d(TAG, "Ongoing CallStyle notification: Large icon (avatar) set")
+                }
+            }
             .setContentIntent(appLaunchPendingIntent)
             .setStyle(
                 Notification.CallStyle.forOngoingCall(caller, hangupPendingIntent)
@@ -1384,7 +1635,7 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             val notification = builder.build()
             notification.flags = notification.flags or Notification.FLAG_ONGOING_EVENT
             notificationManager.notify(ONGOING_CALL_NOTIFICATION_ID, notification)
-            Log.d(TAG, "Android 14+ CallStyle ongoing notification shown (non-dismissible)")
+            Log.d(TAG, "Android 14+ CallStyle ongoing notification shown with avatar (non-dismissible)")
         } else {
             // Android 12-13: CallStyle with foreground service association for high priority
             val notification = builder.build()
@@ -1392,11 +1643,11 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
                 Notification.FLAG_NO_CLEAR or 
                 Notification.FLAG_FOREGROUND_SERVICE
             notificationManager.notify(ONGOING_CALL_NOTIFICATION_ID, notification)
-            Log.d(TAG, "Android 12-13 CallStyle ongoing notification shown with foreground service")
+            Log.d(TAG, "Android 12-13 CallStyle ongoing notification shown with avatar and foreground service")
         }
     }
     
-    private fun showLegacyOngoingCallNotification(callData: CallData, durationSeconds: Long) {
+    private fun showLegacyOngoingCallNotification(callData: CallData, durationSeconds: Long, avatarIcon: Icon? = null) {
         // Create hang up action
         val hangupIntent = createCallActionIntent("HANGUP", callData.id)
         val hangupPendingIntent = PendingIntent.getBroadcast(
@@ -1434,6 +1685,23 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             .setContentText("$callTypeText $ongoingText • $durationText")
             .setSubText(tapToReturnText)
             .setSmallIcon(android.R.drawable.ic_menu_call)
+            .apply {
+                // Set large icon (avatar) if available (Android API 16+ supports large icons)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && avatarIcon != null) {
+                    // Convert Icon to Bitmap for NotificationCompat
+                    try {
+                        val bitmap = iconToBitmap(avatarIcon)
+                        if (bitmap != null) {
+                            setLargeIcon(bitmap)
+                            Log.d(TAG, "Legacy ongoing notification: Large icon (avatar) set for ${callData.callerName}")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to convert icon to bitmap for ongoing notification: ${e.message}")
+                    }
+                } else {
+                    Log.d(TAG, "Legacy ongoing notification: No avatar available for ${callData.callerName}")
+                }
+            }
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setOngoing(true) // CRITICAL: Must be set in builder for proper behavior
@@ -1463,7 +1731,7 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         
         // Show the notification
         notificationManager.notify(ONGOING_CALL_NOTIFICATION_ID, notification)
-        Log.d(TAG, "Legacy ongoing notification shown with foreground service association (non-dismissible)")
+        Log.d(TAG, "Legacy ongoing notification shown with avatar support (non-dismissible)")
     }
     
     /**
@@ -1475,12 +1743,31 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         return try {
             Log.d(TAG, "Creating foreground service notification for: ${callData.callerName}")
             
+            // For foreground service, we need to create the notification synchronously
+            // so we'll generate an initials avatar if no URL avatar is available
+            val avatarIcon = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                if (!callData.callerAvatar.isNullOrEmpty()) {
+                    // Try to load from URL, but fallback to initials if it fails
+                    loadAvatarFromUrl(callData.callerAvatar!!) ?: generateInitialsAvatar(callData.callerName)
+                } else {
+                    generateInitialsAvatar(callData.callerName)
+                }
+            } else {
+                null
+            }
+            
             // For Android 12+ (API 31+), use CallStyle with proper foreground service
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                // Create Person object for the caller
+                // Create Person object for the caller with avatar
                 val caller = Person.Builder()
                     .setName(callData.callerName)
                     .setImportant(true)
+                    .apply {
+                        if (avatarIcon != null) {
+                            setIcon(avatarIcon)
+                            Log.d(TAG, "Foreground service CallStyle: Avatar set for ${callData.callerName}")
+                        }
+                    }
                     .build()
                 
                 // Create hang up action
@@ -1543,6 +1830,13 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
                     .setContentText(tapToReturnText)
                     .setSubText("$callTypeText • $durationText")
                     .setSmallIcon(android.R.drawable.ic_menu_call)
+                    .apply {
+                        // Set large icon (avatar) if available
+                        if (avatarIcon != null) {
+                            setLargeIcon(avatarIcon)
+                            Log.d(TAG, "Foreground service CallStyle: Large icon (avatar) set")
+                        }
+                    }
                     .setContentIntent(appLaunchPendingIntent)
                     .setStyle(
                         Notification.CallStyle.forOngoingCall(caller, hangupPendingIntent)
@@ -1571,7 +1865,7 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
                         Notification.FLAG_FOREGROUND_SERVICE
                 }
                 
-                Log.d(TAG, "CallStyle foreground service notification created")
+                Log.d(TAG, "CallStyle foreground service notification created with avatar support")
                 notification
             } else {
                 // Legacy notification for Android 11 and below
@@ -1633,6 +1927,20 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
                     .setContentText(tapToReturnText)
                     .setSubText("$callTypeText • $durationText")
                     .setSmallIcon(android.R.drawable.ic_menu_call)
+                    .apply {
+                        // Set large icon (avatar) if available
+                        if (avatarIcon != null) {
+                            try {
+                                val bitmap = iconToBitmap(avatarIcon)
+                                if (bitmap != null) {
+                                    setLargeIcon(bitmap)
+                                    Log.d(TAG, "Legacy foreground service: Large icon (avatar) set for ${callData.callerName}")
+                                }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to convert icon to bitmap for foreground service: ${e.message}")
+                            }
+                        }
+                    }
                     .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                     .setCategory(NotificationCompat.CATEGORY_CALL)
                     .setOngoing(true) // CRITICAL for non-dismissible behavior
@@ -1666,7 +1974,7 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
                     android.app.Notification.FLAG_FOREGROUND_SERVICE or
                     android.app.Notification.FLAG_ONGOING_EVENT
                 
-                Log.d(TAG, "Legacy foreground service notification created")
+                Log.d(TAG, "Legacy foreground service notification created with avatar support")
                 notification
             }
         } catch (e: Exception) {

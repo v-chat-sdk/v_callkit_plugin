@@ -10,28 +10,14 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
   @visibleForTesting
   final methodChannel = const MethodChannel('v_callkit_plugin');
 
-  // Stream controllers for different call events
+  // Essential stream controllers only (removed onCallHold, onCallMute, and enhanced streams)
   final StreamController<Map<String, dynamic>> _callAnsweredController =
       StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<Map<String, dynamic>> _callRejectedController =
       StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<Map<String, dynamic>> _callEndedController =
       StreamController<Map<String, dynamic>>.broadcast();
-  final StreamController<Map<String, dynamic>> _callHoldController =
-      StreamController<Map<String, dynamic>>.broadcast();
-  final StreamController<Map<String, dynamic>> _callMuteController =
-      StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<Map<String, dynamic>> _callStateChangedController =
-      StreamController<Map<String, dynamic>>.broadcast();
-
-  // Enhanced stream controllers for more events
-  final StreamController<Map<String, dynamic>>
-      _callConfigurationChangedController =
-      StreamController<Map<String, dynamic>>.broadcast();
-  final StreamController<Map<String, dynamic>> _callTimerUpdatedController =
-      StreamController<Map<String, dynamic>>.broadcast();
-  final StreamController<Map<String, dynamic>>
-      _callAudioDeviceChangedController =
       StreamController<Map<String, dynamic>>.broadcast();
 
   MethodChannelVCallkitPlugin() {
@@ -55,23 +41,8 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
       case 'onCallEnded':
         _callEndedController.add(arguments);
         break;
-      case 'onCallHold':
-        _callHoldController.add(arguments);
-        break;
-      case 'onCallMute':
-        _callMuteController.add(arguments);
-        break;
       case 'onCallStateChanged':
         _callStateChangedController.add(arguments);
-        break;
-      case 'onCallConfigurationChanged':
-        _callConfigurationChangedController.add(arguments);
-        break;
-      case 'onCallTimerUpdated':
-        _callTimerUpdatedController.add(arguments);
-        break;
-      case 'onCallAudioDeviceChanged':
-        _callAudioDeviceChangedController.add(arguments);
         break;
       default:
         if (kDebugMode) {
@@ -80,7 +51,7 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
     }
   }
 
-  // Event streams for listening to call events
+  // Essential event streams only
 
   /// Stream of call answered events
   Stream<Map<String, dynamic>> get onCallAnswered =>
@@ -93,49 +64,35 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
   /// Stream of call ended events
   Stream<Map<String, dynamic>> get onCallEnded => _callEndedController.stream;
 
-  /// Stream of call hold/unhold events
-  Stream<Map<String, dynamic>> get onCallHold => _callHoldController.stream;
-
-  /// Stream of call mute/unmute events
-  Stream<Map<String, dynamic>> get onCallMute => _callMuteController.stream;
-
   /// Stream of call state change events
   Stream<Map<String, dynamic>> get onCallStateChanged =>
       _callStateChangedController.stream;
 
-  /// Stream of call configuration change events
-  Stream<Map<String, dynamic>> get onCallConfigurationChanged =>
-      _callConfigurationChangedController.stream;
-
-  /// Stream of call timer update events
-  Stream<Map<String, dynamic>> get onCallTimerUpdated =>
-      _callTimerUpdatedController.stream;
-
-  /// Stream of call audio device change events
-  Stream<Map<String, dynamic>> get onCallAudioDeviceChanged =>
-      _callAudioDeviceChangedController.stream;
+  /// Dispose method to clean up resources
+  void dispose() {
+    _callAnsweredController.close();
+    _callRejectedController.close();
+    _callEndedController.close();
+    _callStateChangedController.close();
+  }
 
   @override
   Future<String?> getPlatformVersion() async {
-    final version = await methodChannel.invokeMethod<String>(
-      'getPlatformVersion',
-    );
+    final version =
+        await methodChannel.invokeMethod<String>('getPlatformVersion');
     return version;
   }
 
   @override
   Future<bool> hasPermissions() async {
-    final hasPermissions = await methodChannel.invokeMethod<bool>(
-      'hasPermissions',
-    );
-    return hasPermissions ?? false;
+    final hasPerms = await methodChannel.invokeMethod<bool>('hasPermissions');
+    return hasPerms ?? false;
   }
 
   @override
   Future<bool> requestPermissions() async {
-    final granted = await methodChannel.invokeMethod<bool>(
-      'requestPermissions',
-    );
+    final granted =
+        await methodChannel.invokeMethod<bool>('requestPermissions');
     return granted ?? false;
   }
 
@@ -208,24 +165,6 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
   }
 
   @override
-  Future<bool> muteCall(bool isMuted, [String? callId]) async {
-    final success = await methodChannel.invokeMethod<bool>('muteCall', {
-      'isMuted': isMuted,
-      'callId': callId,
-    });
-    return success ?? false;
-  }
-
-  @override
-  Future<bool> holdCall(bool isOnHold, [String? callId]) async {
-    final success = await methodChannel.invokeMethod<bool>('holdCall', {
-      'isOnHold': isOnHold,
-      'callId': callId,
-    });
-    return success ?? false;
-  }
-
-  @override
   Future<bool> isCallActive() async {
     final isActive = await methodChannel.invokeMethod<bool>('isCallActive');
     return isActive ?? false;
@@ -253,12 +192,10 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
     final result = await methodChannel.invokeMethod<List<Object?>>(
       'getSystemRingtones',
     );
-    if (result != null) {
-      return result
-          .map((item) => Map<String, dynamic>.from(item as Map))
-          .toList();
-    }
-    return [];
+    return result
+            ?.map((e) => _safeMapConvert(e as Map<Object?, Object?>))
+            .toList() ??
+        [];
   }
 
   @override
@@ -266,7 +203,7 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
     final result = await methodChannel.invokeMethod<bool>(
       'checkBatteryOptimization',
     );
-    return result ?? true;
+    return result ?? false;
   }
 
   @override
@@ -311,69 +248,29 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
 
   @override
   Future<bool> startOutgoingCallNotification(
-    Map<String, dynamic> callData,
-  ) async {
-    final result = await methodChannel.invokeMethod<bool>(
+      Map<String, dynamic> callData) async {
+    final success = await methodChannel.invokeMethod<bool>(
       'startOutgoingCallNotification',
       callData,
     );
-    return result ?? false;
+    return success ?? false;
   }
 
   @override
   Future<bool> stopCallForegroundService() async {
-    final result = await methodChannel.invokeMethod<bool>(
+    final success = await methodChannel.invokeMethod<bool>(
       'stopCallForegroundService',
     );
-    return result ?? false;
+    return success ?? false;
   }
 
-  /// Safely converts a map from platform channel to Map with String keys and dynamic values
-  /// This handles nested maps and ensures proper type conversion
-  static Map<String, dynamic> _safeMapConvert(dynamic value) {
-    if (value == null) return {};
-
-    if (value is Map<String, dynamic>) {
-      return value;
-    }
-
-    if (value is Map) {
-      final result = <String, dynamic>{};
-      value.forEach((key, val) {
-        final stringKey = key.toString();
-        result[stringKey] = _convertValue(val);
-      });
-      return result;
-    }
-
-    return {};
-  }
-
-  /// Recursively converts values to appropriate types
-  static dynamic _convertValue(dynamic value) {
-    if (value == null) return null;
-
-    if (value is Map) {
-      return _safeMapConvert(value);
-    }
-
-    if (value is List) {
-      return value.map((item) => _convertValue(item)).toList();
-    }
-
-    return value;
-  }
-
-  /// Dispose method to clean up resources
-  void dispose() {
-    _callAnsweredController.close();
-    _callRejectedController.close();
-    _callEndedController.close();
-    _callHoldController.close();
-    _callMuteController.close();
-    _callStateChangedController.close();
-    _callConfigurationChangedController.close();
-    _callTimerUpdatedController.close();
-    _callAudioDeviceChangedController.close();
+  /// Safely converts a map from platform channel
+  Map<String, dynamic> _safeMapConvert(Map<Object?, Object?> map) {
+    final result = <String, dynamic>{};
+    map.forEach((key, value) {
+      final stringKey = key.toString();
+      result[stringKey] = value;
+    });
+    return result;
   }
 }

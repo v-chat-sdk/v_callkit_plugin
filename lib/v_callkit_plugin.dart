@@ -4,6 +4,7 @@ import 'v_callkit_plugin_platform_interface.dart';
 import 'v_callkit_plugin_method_channel.dart';
 import 'models/call_data.dart';
 import 'models/call_event.dart';
+import 'models/ui_configuration.dart';
 
 /// Main plugin class for VCallkit functionality
 class VCallkitPlugin {
@@ -28,29 +29,20 @@ class VCallkitPlugin {
   final MethodChannelVCallkitPlugin _methodChannelPlugin =
       VCallkitPluginPlatform.instance as MethodChannelVCallkitPlugin;
 
-  // Event streams with proper typing
+  // Essential event streams only (removed onCallHold, onCallMute, onAllEvents)
   late final Stream<CallAnsweredEvent> _onCallAnswered;
   late final Stream<CallRejectedEvent> _onCallRejected;
   late final Stream<CallEndedEvent> _onCallEnded;
-  late final Stream<CallHoldEvent> _onCallHold;
-  late final Stream<CallMuteEvent> _onCallMute;
   late final Stream<CallStateChangedEvent> _onCallStateChanged;
 
-  // Enhanced streams for customization
-  late final Stream<Map<String, dynamic>> _onCallConfigurationChanged;
-  late final Stream<Map<String, dynamic>> _onCallTimerUpdated;
-  late final Stream<Map<String, dynamic>> _onCallAudioDeviceChanged;
-
-  /// Stream of all call events
+  /// Stream of essential call events only
   late final Stream<CallEvent> _onCallEvent;
-
-  /// Stream of all enhanced events (including configuration and timer updates)
-  late final Stream<Map<String, dynamic>> _onAllEvents;
 
   bool _initialized = false;
 
-  // Global UI configuration storage
-  Map<String, dynamic> _globalUIConfiguration = {};
+  // Global UI configuration storage using the new class
+  VCallkitUIConfiguration _globalUIConfiguration =
+      const VCallkitUIConfiguration();
 
   // Public API - Initialization and Lifecycle
 
@@ -68,7 +60,7 @@ class VCallkitPlugin {
     _initialized = false;
   }
 
-  // Public API - Event Streams
+  // Public API - Essential Event Streams Only
 
   /// Stream of call answered events
   Stream<CallAnsweredEvent> get onCallAnswered {
@@ -88,52 +80,16 @@ class VCallkitPlugin {
     return _onCallEnded;
   }
 
-  /// Stream of call hold/unhold events
-  Stream<CallHoldEvent> get onCallHold {
-    _ensureInitialized();
-    return _onCallHold;
-  }
-
-  /// Stream of call mute/unmute events
-  Stream<CallMuteEvent> get onCallMute {
-    _ensureInitialized();
-    return _onCallMute;
-  }
-
   /// Stream of call state change events
   Stream<CallStateChangedEvent> get onCallStateChanged {
     _ensureInitialized();
     return _onCallStateChanged;
   }
 
-  /// Stream of call configuration change events
-  Stream<Map<String, dynamic>> get onCallConfigurationChanged {
-    _ensureInitialized();
-    return _onCallConfigurationChanged;
-  }
-
-  /// Stream of call timer update events
-  Stream<Map<String, dynamic>> get onCallTimerUpdated {
-    _ensureInitialized();
-    return _onCallTimerUpdated;
-  }
-
-  /// Stream of call audio device change events
-  Stream<Map<String, dynamic>> get onCallAudioDeviceChanged {
-    _ensureInitialized();
-    return _onCallAudioDeviceChanged;
-  }
-
-  /// Stream of all call events
+  /// Stream of essential call events
   Stream<CallEvent> get onCallEvent {
     _ensureInitialized();
     return _onCallEvent;
-  }
-
-  /// Stream of all enhanced events including configuration and timer updates
-  Stream<Map<String, dynamic>> get onAllEvents {
-    _ensureInitialized();
-    return _onAllEvents;
   }
 
   // Public API - Basic Call Operations
@@ -165,16 +121,25 @@ class VCallkitPlugin {
     return VCallkitPluginPlatform.instance.showIncomingCallWithConfig(data);
   }
 
-  /// Set global UI configuration for all call screens
+  /// Set global UI configuration using the VCallkitUIConfiguration class
   /// This includes themes, translations, and behavior settings
-  Future<bool> setUIConfiguration(Map<String, dynamic> config) {
-    _globalUIConfiguration = Map<String, dynamic>.from(config);
-    return VCallkitPluginPlatform.instance.setUIConfiguration(config);
+  Future<bool> setUIConfiguration(VCallkitUIConfiguration config) {
+    _globalUIConfiguration = config;
+    return VCallkitPluginPlatform.instance.setUIConfiguration(config.toMap());
+  }
+
+  /// Overloaded method to accept Map for backward compatibility
+  Future<bool> setUIConfigurationFromMap(Map<String, dynamic> config) {
+    final uiConfig = VCallkitUIConfiguration.fromMap(config);
+    return setUIConfiguration(uiConfig);
   }
 
   /// Get the current global UI configuration
-  Map<String, dynamic> get globalUIConfiguration =>
-      Map<String, dynamic>.from(_globalUIConfiguration);
+  VCallkitUIConfiguration get globalUIConfiguration => _globalUIConfiguration;
+
+  /// Get the current global UI configuration as Map for backward compatibility
+  Map<String, dynamic> get globalUIConfigurationMap =>
+      _globalUIConfiguration.toMap();
 
   /// Force show hangup notification for testing purposes
   Future<bool> forceShowHangupNotification(Map<String, dynamic> data) {
@@ -199,16 +164,6 @@ class VCallkitPlugin {
   /// Reject the current call
   Future<bool> rejectCall([String? callId]) {
     return VCallkitPluginPlatform.instance.rejectCall(callId);
-  }
-
-  /// Mute or unmute the current call
-  Future<bool> muteCall(bool isMuted, [String? callId]) {
-    return VCallkitPluginPlatform.instance.muteCall(isMuted, callId);
-  }
-
-  /// Hold or unhold the current call
-  Future<bool> holdCall(bool isOnHold, [String? callId]) {
-    return VCallkitPluginPlatform.instance.holdCall(isOnHold, callId);
   }
 
   /// Check if there's an active call
@@ -316,7 +271,7 @@ class VCallkitPlugin {
     required String callerNumber,
     String? callerAvatar,
     Map<String, dynamic> extra = const {},
-    Map<String, dynamic>? customConfig,
+    VCallkitUIConfiguration? customConfig,
   }) {
     return _showIncomingCallWithType(
       callId: callId,
@@ -336,7 +291,7 @@ class VCallkitPlugin {
     required String callerNumber,
     String? callerAvatar,
     Map<String, dynamic> extra = const {},
-    Map<String, dynamic>? customConfig,
+    VCallkitUIConfiguration? customConfig,
   }) {
     return _showIncomingCallWithType(
       callId: callId,
@@ -357,26 +312,7 @@ class VCallkitPlugin {
     String? callerAvatar,
     required bool isVideoCall,
     Map<String, dynamic> extra = const {},
-
-    // Theme customization
-    String? backgroundColor,
-    String? accentColor,
-    String? textColor,
-    String? secondaryTextColor,
-
-    // Text translations
-    String? answerButtonText,
-    String? declineButtonText,
-    String? hangupButtonText,
-    String? incomingCallText,
-    String? callInProgressText,
-
-    // Behavior settings
-    bool? showCallerNumber,
-    bool? enableVibration,
-    bool? enableRingtone,
-    bool? showCallDuration,
-    int? callTimeoutSeconds,
+    VCallkitUIConfiguration? customConfig,
   }) {
     final callData = CallData(
       id: callId ?? DateTime.now().millisecondsSinceEpoch.toString(),
@@ -387,35 +323,14 @@ class VCallkitPlugin {
       extra: extra,
     );
 
-    final config = <String, dynamic>{
-      // Merge global configuration
-      ..._globalUIConfiguration,
+    if (customConfig != null) {
+      return showIncomingCallWithConfig({
+        'callData': callData.toMap(),
+        'config': customConfig.toMap(),
+      });
+    }
 
-      // Apply theme customization if provided
-      if (backgroundColor != null) 'backgroundColor': backgroundColor,
-      if (accentColor != null) 'accentColor': accentColor,
-      if (textColor != null) 'textColor': textColor,
-      if (secondaryTextColor != null) 'secondaryTextColor': secondaryTextColor,
-
-      // Apply text translations if provided
-      if (answerButtonText != null) 'answerButtonText': answerButtonText,
-      if (declineButtonText != null) 'declineButtonText': declineButtonText,
-      if (hangupButtonText != null) 'hangupButtonText': hangupButtonText,
-      if (incomingCallText != null) 'incomingCallText': incomingCallText,
-      if (callInProgressText != null) 'callInProgressText': callInProgressText,
-
-      // Apply behavior settings if provided
-      if (showCallerNumber != null) 'showCallerNumber': showCallerNumber,
-      if (enableVibration != null) 'enableVibration': enableVibration,
-      if (enableRingtone != null) 'enableRingtone': enableRingtone,
-      if (showCallDuration != null) 'showCallDuration': showCallDuration,
-      if (callTimeoutSeconds != null) 'callTimeoutSeconds': callTimeoutSeconds,
-    };
-
-    return showIncomingCallWithConfig({
-      'callData': callData.toMap(),
-      'config': config,
-    });
+    return showIncomingCall(callData);
   }
 
   // Public API - Event Filtering
@@ -435,80 +350,9 @@ class VCallkitPlugin {
     return _filterStreamByCallId(onCallEnded, callId);
   }
 
-  /// Listen to timer updates for a specific call
-  Stream<Map<String, dynamic>> listenToCallTimer([String? callId]) {
-    return onCallTimerUpdated
-        .where((event) => callId == null || event['callId'] == callId);
-  }
-
-  /// Listen to configuration changes
-  Stream<Map<String, dynamic>> get onConfigurationChanged =>
-      onCallConfigurationChanged;
-
-  // Public API - Advanced Configuration Helpers
-
-  /// Create a theme configuration map
-  static Map<String, dynamic> createTheme({
-    required String backgroundColor,
-    required String accentColor,
-    required String textColor,
-    required String secondaryTextColor,
-  }) {
-    return {
-      'backgroundColor': backgroundColor,
-      'accentColor': accentColor,
-      'textColor': textColor,
-      'secondaryTextColor': secondaryTextColor,
-    };
-  }
-
-  /// Create a translation configuration map
-  static Map<String, dynamic> createTranslation({
-    required String answerButtonText,
-    required String declineButtonText,
-    required String hangupButtonText,
-    required String incomingVoiceCallText,
-    required String incomingVideoCallText,
-    required String callInProgressText,
-    String? tapToReturnText,
-    String? unknownCallerText,
-  }) {
-    return {
-      'answerButtonText': answerButtonText,
-      'declineButtonText': declineButtonText,
-      'hangupButtonText': hangupButtonText,
-      'incomingVoiceCallText': incomingVoiceCallText,
-      'incomingVideoCallText': incomingVideoCallText,
-      'callInProgressText': callInProgressText,
-      'tapToReturnText': tapToReturnText ?? 'Tap to return to call',
-      'unknownCallerText': unknownCallerText ?? 'Unknown',
-    };
-  }
-
-  /// Create a behavior configuration map
-  static Map<String, dynamic> createBehaviorConfig({
-    bool showCallerNumber = true,
-    bool enableVibration = true,
-    bool enableRingtone = true,
-    bool showCallDuration = true,
-    int callTimeoutSeconds = 60,
-    bool enableCallTimeout = true,
-    bool useFullScreenCallUI = true,
-  }) {
-    return {
-      'showCallerNumber': showCallerNumber,
-      'enableVibration': enableVibration,
-      'enableRingtone': enableRingtone,
-      'showCallDuration': showCallDuration,
-      'callTimeoutSeconds': callTimeoutSeconds,
-      'enableCallTimeout': enableCallTimeout,
-      'useFullScreenCallUI': useFullScreenCallUI,
-    };
-  }
-
   // Private helper methods
 
-  /// Set up all event streams during initialization
+  /// Set up essential event streams only during initialization
   void _setupEventStreams() {
     _onCallAnswered = _methodChannelPlugin.onCallAnswered.map(
       (data) => CallAnsweredEvent.fromMap(data),
@@ -522,45 +366,16 @@ class VCallkitPlugin {
       (data) => CallEndedEvent.fromMap(data),
     );
 
-    _onCallHold = _methodChannelPlugin.onCallHold.map(
-      (data) => CallHoldEvent.fromMap(data),
-    );
-
-    _onCallMute = _methodChannelPlugin.onCallMute.map(
-      (data) => CallMuteEvent.fromMap(data),
-    );
-
     _onCallStateChanged = _methodChannelPlugin.onCallStateChanged.map(
       (data) => CallStateChangedEvent.fromMap(data),
     );
 
-    // Enhanced streams
-    _onCallConfigurationChanged =
-        _methodChannelPlugin.onCallConfigurationChanged;
-    _onCallTimerUpdated = _methodChannelPlugin.onCallTimerUpdated;
-    _onCallAudioDeviceChanged = _methodChannelPlugin.onCallAudioDeviceChanged;
-
-    // Combined event stream
+    // Combined essential event stream only
     _onCallEvent = StreamGroup.merge([
       _onCallAnswered,
       _onCallRejected,
       _onCallEnded,
-      _onCallHold,
-      _onCallMute,
       _onCallStateChanged,
-    ]);
-
-    // Combined enhanced events stream
-    _onAllEvents = StreamGroup.merge([
-      _onCallAnswered.map((e) => e.toMap()),
-      _onCallRejected.map((e) => e.toMap()),
-      _onCallEnded.map((e) => e.toMap()),
-      _onCallHold.map((e) => e.toMap()),
-      _onCallMute.map((e) => e.toMap()),
-      _onCallStateChanged.map((e) => e.toMap()),
-      _onCallConfigurationChanged,
-      _onCallTimerUpdated,
-      _onCallAudioDeviceChanged,
     ]);
   }
 
@@ -579,7 +394,7 @@ class VCallkitPlugin {
     String? callerAvatar,
     required bool isVideoCall,
     Map<String, dynamic> extra = const {},
-    Map<String, dynamic>? customConfig,
+    VCallkitUIConfiguration? customConfig,
   }) {
     final callData = CallData(
       id: callId ?? DateTime.now().millisecondsSinceEpoch.toString(),
@@ -593,10 +408,7 @@ class VCallkitPlugin {
     if (customConfig != null) {
       return showIncomingCallWithConfig({
         'callData': callData.toMap(),
-        'config': {
-          ..._globalUIConfiguration,
-          ...customConfig,
-        },
+        'config': customConfig.toMap(),
       });
     }
 
@@ -616,23 +428,25 @@ class VCallkitPlugin {
 /// Helper class for merging streams
 class StreamGroup {
   static Stream<T> merge<T>(List<Stream<T>> streams) {
-    final controller = StreamController<T>.broadcast();
+    late StreamController<T> controller;
+    List<StreamSubscription<T>> subscriptions = [];
 
-    final subscriptions = <StreamSubscription>[];
-
-    for (final stream in streams) {
-      final subscription = stream.listen(
-        controller.add,
-        onError: controller.addError,
-      );
-      subscriptions.add(subscription);
-    }
-
-    controller.onCancel = () {
-      for (final subscription in subscriptions) {
-        subscription.cancel();
-      }
-    };
+    controller = StreamController<T>(
+      onListen: () {
+        for (var stream in streams) {
+          subscriptions.add(stream.listen(
+            (data) => controller.add(data),
+            onError: (error) => controller.addError(error),
+          ));
+        }
+      },
+      onCancel: () {
+        for (var subscription in subscriptions) {
+          subscription.cancel();
+        }
+        subscriptions.clear();
+      },
+    );
 
     return controller.stream;
   }

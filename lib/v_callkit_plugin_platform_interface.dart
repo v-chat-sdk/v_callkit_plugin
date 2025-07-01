@@ -80,16 +80,6 @@ abstract class VCallkitPluginPlatform extends PlatformInterface {
     throw UnimplementedError('rejectCall() has not been implemented.');
   }
 
-  /// Mutes or unmutes the current call
-  Future<bool> muteCall(bool isMuted, [String? callId]) {
-    throw UnimplementedError('muteCall() has not been implemented.');
-  }
-
-  /// Holds or unholds the current call
-  Future<bool> holdCall(bool isOnHold, [String? callId]) {
-    throw UnimplementedError('holdCall() has not been implemented.');
-  }
-
   /// Checks if there's an active call
   Future<bool> isCallActive() {
     throw UnimplementedError('isCallActive() has not been implemented.');

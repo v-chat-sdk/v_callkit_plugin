@@ -112,18 +112,6 @@ class _HomeScreenState extends State<HomeScreen> {
       await _handleCallEnded(event.callId);
     });
 
-    _vCallkitPlugin.onCallHold.listen((event) {
-      _addToEventLog(
-        '⏸️ Call Hold: ${event.callId} (${event.isOnHold ? 'on hold' : 'resumed'})',
-      );
-    });
-
-    _vCallkitPlugin.onCallMute.listen((event) {
-      _addToEventLog(
-        '🔇 Call Mute: ${event.callId} (${event.isMuted ? 'muted' : 'unmuted'})',
-      );
-    });
-
     _vCallkitPlugin.onCallStateChanged.listen((event) {
       _addToEventLog('🔄 Call State: ${event.callId} -> ${event.state.name}');
     });

@@ -13,20 +13,17 @@ object CallConnectionManager {
     
     private const val TAG = "CallConnectionManager"
     
-    // Call states
+    // Call states (simplified - removed HOLDING state as it's no longer used)
     enum class CallState {
         RINGING,
         ACTIVE,
-        HOLDING,
         ENDED
     }
     
-    // Call session data
+    // Call session data (simplified - removed mute and hold fields)
     data class CallSession(
         val callData: CallData,
         var state: CallState = CallState.RINGING,
-        var isMuted: Boolean = false,
-        var isOnHold: Boolean = false,
         val startTime: Long = System.currentTimeMillis()
     )
     
@@ -65,7 +62,7 @@ object CallConnectionManager {
     }
     
     /**
-     * Gets active call data
+     * Gets active call data (simplified - removed mute and hold fields)
      */
     fun getActiveCallData(): Map<String, Any>? {
         val activeSession = activeCalls.values.firstOrNull { it.state != CallState.ENDED }
@@ -77,8 +74,6 @@ object CallConnectionManager {
                 "callerAvatar" to (session.callData.callerAvatar ?: ""),
                 "isVideoCall" to session.callData.isVideoCall,
                 "state" to getStateString(session.state),
-                "isMuted" to session.isMuted,
-                "isOnHold" to session.isOnHold,
                 "extra" to session.callData.extra
             )
         }
@@ -160,47 +155,6 @@ object CallConnectionManager {
     }
     
     /**
-     * Mutes or unmutes a call
-     */
-    fun muteCall(callId: String?, isMuted: Boolean): Boolean {
-        val session = getCallSession(callId)
-        return if (session != null && session.state == CallState.ACTIVE) {
-            session.isMuted = isMuted
-            // Send Flutter callback
-            VCallkitPlugin.methodChannel?.invokeMethod("onCallMute", mapOf(
-                "callId" to session.callData.id,
-                "isMuted" to isMuted,
-                "timestamp" to System.currentTimeMillis()
-            ))
-            Log.d(TAG, "Call ${if (isMuted) "muted" else "unmuted"}: ${session.callData.id}")
-            true
-        } else {
-            false
-        }
-    }
-    
-    /**
-     * Holds or unholds a call
-     */
-    fun holdCall(callId: String?, isOnHold: Boolean): Boolean {
-        val session = getCallSession(callId)
-        return if (session != null && session.state == CallState.ACTIVE) {
-            session.state = if (isOnHold) CallState.HOLDING else CallState.ACTIVE
-            session.isOnHold = isOnHold
-            // Send Flutter callback
-            VCallkitPlugin.methodChannel?.invokeMethod("onCallHold", mapOf(
-                "callId" to session.callData.id,
-                "isOnHold" to isOnHold,
-                "timestamp" to System.currentTimeMillis()
-            ))
-            Log.d(TAG, "Call ${if (isOnHold) "held" else "resumed"}: ${session.callData.id}")
-            true
-        } else {
-            false
-        }
-    }
-    
-    /**
      * Gets a call session by ID or the first active one
      */
     private fun getCallSession(callId: String?): CallSession? {
@@ -212,13 +166,12 @@ object CallConnectionManager {
     }
     
     /**
-     * Converts call state to string
+     * Converts call state to string (simplified - removed holding state)
      */
     private fun getStateString(state: CallState): String {
         return when (state) {
             CallState.RINGING -> "ringing"
             CallState.ACTIVE -> "active"
-            CallState.HOLDING -> "holding"
             CallState.ENDED -> "ended"
         }
     }

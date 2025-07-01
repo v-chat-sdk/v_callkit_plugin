@@ -108,8 +108,6 @@ object CallConstants {
     const val METHOD_END_CALL = "endCall"
     const val METHOD_ANSWER_CALL = "answerCall"
     const val METHOD_REJECT_CALL = "rejectCall"
-    const val METHOD_MUTE_CALL = "muteCall"
-    const val METHOD_HOLD_CALL = "holdCall"
     const val METHOD_IS_CALL_ACTIVE = "isCallActive"
     const val METHOD_GET_ACTIVE_CALL_DATA = "getActiveCallData"
     const val METHOD_SET_CUSTOM_RINGTONE = "setCustomRingtone"
@@ -129,13 +127,10 @@ object CallConstants {
     const val CALLBACK_ON_CALL_ANSWERED = "onCallAnswered"
     const val CALLBACK_ON_CALL_REJECTED = "onCallRejected"
     const val CALLBACK_ON_CALL_ENDED = "onCallEnded"
-    const val CALLBACK_ON_CALL_MUTE = "onCallMute"
-    const val CALLBACK_ON_CALL_HOLD = "onCallHold"
     
     // Call state strings
     const val CALL_STATE_RINGING = "ringing"
     const val CALL_STATE_ACTIVE = "active"
-    const val CALL_STATE_HOLDING = "holding"
     const val CALL_STATE_ENDED = "ended"
     
     // End call reasons
