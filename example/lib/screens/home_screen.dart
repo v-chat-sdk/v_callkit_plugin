@@ -89,9 +89,13 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     // Listen to specific events
-    _vCallkitPlugin.onCallAnswered.listen((event) {
+    _vCallkitPlugin.onCallAnswered.listen((event) async {
       _addToEventLog('✅ Call Answered: ${event.callId}');
       _showSnackBar(AppStrings.callAnswered, AppColors.success);
+
+      // 🎯 EXAMPLE: Start outgoing call notification after call is answered
+      // This is where you control when to show the persistent call notification
+      await _handleCallAnswered(event.callId);
     });
 
     _vCallkitPlugin.onCallRejected.listen((event) {
@@ -99,9 +103,12 @@ class _HomeScreenState extends State<HomeScreen> {
       _showSnackBar(AppStrings.callRejected, AppColors.error);
     });
 
-    _vCallkitPlugin.onCallEnded.listen((event) {
+    _vCallkitPlugin.onCallEnded.listen((event) async {
       _addToEventLog('🔚 Call Ended: ${event.callId} (${event.reason})');
       _showSnackBar(AppStrings.callEnded, AppColors.warning);
+
+      // 🎯 EXAMPLE: Stop persistent notification when call ends
+      await _handleCallEnded(event.callId);
     });
 
     _vCallkitPlugin.onCallHold.listen((event) {
@@ -263,6 +270,84 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _eventLog.clear();
     });
+  }
+
+  /// 🎯 EXAMPLE: Handle call answered event and start persistent notification
+  /// This is called when a call is answered from the notification
+  Future<void> _handleCallAnswered(String callId) async {
+    try {
+      _addToEventLog(
+        '🔥 Starting persistent call notification for call: $callId',
+      );
+
+      // Get the call data for the answered call
+      final callData = await _vCallkitPlugin.getActiveCallData();
+
+      if (callData != null) {
+        // 🎯 THIS IS THE KEY: Start the outgoing call notification
+        // This creates a persistent, non-dismissible notification with hangup button
+        await _vCallkitPlugin.startOutgoingCallNotification(callData);
+
+        _addToEventLog(
+          '✅ Persistent call notification started for: ${callData.callerName}',
+        );
+        _showSnackBar(
+          'Persistent call notification started!\n'
+          '• Non-dismissible notification shown\n'
+          '• Works on Android 9+ and below\n'
+          '• Hangup button available',
+          AppColors.success,
+        );
+
+        // TODO: Add your call logic here
+        // Example:
+        // await _joinCall(callData);
+        // await _updateUserStatus('in_call');
+        // await _startCallTimer();
+      } else {
+        _addToEventLog('❌ No call data found for answered call: $callId');
+        _showSnackBar('No call data found for answered call', AppColors.error);
+      }
+    } catch (e) {
+      _addToEventLog('❌ Error starting persistent notification: $e');
+      _showSnackBar(
+        'Error starting persistent notification: $e',
+        AppColors.error,
+      );
+    }
+  }
+
+  /// 🎯 EXAMPLE: Handle call ended event and stop persistent notification
+  /// This is called when a call ends (hangup, decline, etc.)
+  Future<void> _handleCallEnded(String callId) async {
+    try {
+      _addToEventLog(
+        '🛑 Stopping persistent call notification for call: $callId',
+      );
+
+      // 🎯 THIS IS THE KEY: Stop the foreground service and notification
+      await _vCallkitPlugin.stopCallForegroundService();
+
+      _addToEventLog('✅ Persistent call notification stopped');
+      _showSnackBar(
+        'Persistent call notification stopped!\n'
+        '• Foreground service stopped\n'
+        '• Notification dismissed',
+        AppColors.info,
+      );
+
+      // TODO: Add your cleanup logic here
+      // Example:
+      // await _leaveCall();
+      // await _updateUserStatus('offline');
+      // await _stopCallTimer();
+    } catch (e) {
+      _addToEventLog('❌ Error stopping persistent notification: $e');
+      _showSnackBar(
+        'Error stopping persistent notification: $e',
+        AppColors.error,
+      );
+    }
   }
 
   void _handleCallActionLaunch(String action, CallData callData) {
