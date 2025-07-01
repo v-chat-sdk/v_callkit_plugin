@@ -44,6 +44,9 @@ abstract class CallEvent {
     this.data = const {},
   });
 
+  /// Converts the event to a Map
+  Map<String, dynamic> toMap();
+
   /// Creates a CallEvent from a Map
   factory CallEvent.fromMap(Map<String, dynamic> map) {
     final actionString = map['action'] as String? ?? '';
@@ -94,6 +97,30 @@ abstract class CallEvent {
         return CallAction.stateChanged;
     }
   }
+
+  /// Converts call action to string
+  static String _callActionToString(CallAction action) {
+    switch (action) {
+      case CallAction.answered:
+        return 'answered';
+      case CallAction.rejected:
+        return 'rejected';
+      case CallAction.ended:
+        return 'ended';
+      case CallAction.aborted:
+        return 'aborted';
+      case CallAction.hold:
+        return 'hold';
+      case CallAction.unhold:
+        return 'unhold';
+      case CallAction.mute:
+        return 'mute';
+      case CallAction.unmute:
+        return 'unmute';
+      case CallAction.stateChanged:
+        return 'state_changed';
+    }
+  }
 }
 
 /// Event fired when a call is answered
@@ -118,6 +145,17 @@ class CallAnsweredEvent extends CallEvent {
       videoState: map['videoState'] as int?,
     );
   }
+
+  @override
+  Map<String, dynamic> toMap() {
+    return {
+      'callId': callId,
+      'action': CallEvent._callActionToString(action),
+      'timestamp': timestamp.millisecondsSinceEpoch,
+      'videoState': videoState,
+      ...data,
+    };
+  }
 }
 
 /// Event fired when a call is rejected
@@ -136,6 +174,16 @@ class CallRejectedEvent extends CallEvent {
       ),
       data: Map<String, dynamic>.from(map),
     );
+  }
+
+  @override
+  Map<String, dynamic> toMap() {
+    return {
+      'callId': callId,
+      'action': CallEvent._callActionToString(action),
+      'timestamp': timestamp.millisecondsSinceEpoch,
+      ...data,
+    };
   }
 }
 
@@ -161,6 +209,17 @@ class CallEndedEvent extends CallEvent {
       reason: map['action'] as String? ?? 'ended',
     );
   }
+
+  @override
+  Map<String, dynamic> toMap() {
+    return {
+      'callId': callId,
+      'action': CallEvent._callActionToString(action),
+      'timestamp': timestamp.millisecondsSinceEpoch,
+      'reason': reason,
+      ...data,
+    };
+  }
 }
 
 /// Event fired when a call is put on hold or taken off hold
@@ -185,6 +244,17 @@ class CallHoldEvent extends CallEvent {
       isOnHold: map['isOnHold'] as bool? ?? false,
     );
   }
+
+  @override
+  Map<String, dynamic> toMap() {
+    return {
+      'callId': callId,
+      'action': CallEvent._callActionToString(action),
+      'timestamp': timestamp.millisecondsSinceEpoch,
+      'isOnHold': isOnHold,
+      ...data,
+    };
+  }
 }
 
 /// Event fired when a call is muted or unmuted
@@ -208,6 +278,17 @@ class CallMuteEvent extends CallEvent {
       data: Map<String, dynamic>.from(map),
       isMuted: map['isMuted'] as bool? ?? false,
     );
+  }
+
+  @override
+  Map<String, dynamic> toMap() {
+    return {
+      'callId': callId,
+      'action': CallEvent._callActionToString(action),
+      'timestamp': timestamp.millisecondsSinceEpoch,
+      'isMuted': isMuted,
+      ...data,
+    };
   }
 }
 
@@ -234,6 +315,17 @@ class CallStateChangedEvent extends CallEvent {
     );
   }
 
+  @override
+  Map<String, dynamic> toMap() {
+    return {
+      'callId': callId,
+      'action': CallEvent._callActionToString(action),
+      'timestamp': timestamp.millisecondsSinceEpoch,
+      'state': _callStateToString(state),
+      ...data,
+    };
+  }
+
   /// Parses call state from string
   static CallState _parseCallState(String stateString) {
     switch (stateString.toLowerCase()) {
@@ -253,6 +345,28 @@ class CallStateChangedEvent extends CallEvent {
         return CallState.disconnected;
       default:
         return CallState.unknown;
+    }
+  }
+
+  /// Converts call state to string
+  static String _callStateToString(CallState state) {
+    switch (state) {
+      case CallState.initializing:
+        return 'initializing';
+      case CallState.newCall:
+        return 'new';
+      case CallState.ringing:
+        return 'ringing';
+      case CallState.dialing:
+        return 'dialing';
+      case CallState.active:
+        return 'active';
+      case CallState.holding:
+        return 'holding';
+      case CallState.disconnected:
+        return 'disconnected';
+      case CallState.unknown:
+        return 'unknown';
     }
   }
 }
@@ -275,5 +389,15 @@ class CallGenericEvent extends CallEvent {
       ),
       data: Map<String, dynamic>.from(map),
     );
+  }
+
+  @override
+  Map<String, dynamic> toMap() {
+    return {
+      'callId': callId,
+      'action': CallEvent._callActionToString(action),
+      'timestamp': timestamp.millisecondsSinceEpoch,
+      ...data,
+    };
   }
 }

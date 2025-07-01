@@ -72,6 +72,29 @@ class MockVCallkitPluginPlatform
 
   @override
   Future<bool> stopCallForegroundService() => Future.value(true);
+
+  @override
+  Future<bool> showIncomingCallWithConfig(Map<String, dynamic> data) =>
+      Future.value(true);
+
+  @override
+  Future<bool> setUIConfiguration(Map<String, dynamic> config) =>
+      Future.value(true);
+
+  @override
+  Future<bool> forceShowHangupNotification(Map<String, dynamic> data) =>
+      Future.value(true);
+
+  @override
+  Future<Map<String, dynamic>> getCallManagerDebugInfo() => Future.value({
+        'hasActiveCall': false,
+        'activeCallData': null,
+        'androidVersion': 34,
+        'hasCallForegroundService': true,
+        'deviceManufacturer': 'test-manufacturer',
+        'deviceModel': 'test-model',
+        'pluginVersion': '1.0.0',
+      });
 }
 
 void main() {
@@ -114,6 +137,18 @@ void main() {
       expect(await mockPlatform.getLastCallActionLaunch(), null);
       expect(await mockPlatform.hasCallActionLaunchData(), false);
       expect(await mockPlatform.clearCallActionLaunchData(), true);
+
+      // Test new customization methods
+      expect(await mockPlatform.showIncomingCallWithConfig({'test': 'config'}),
+          true);
+      expect(await mockPlatform.setUIConfiguration({'theme': 'dark'}), true);
+      expect(await mockPlatform.forceShowHangupNotification({'test': 'hangup'}),
+          true);
+
+      final debugInfo = await mockPlatform.getCallManagerDebugInfo();
+      expect(debugInfo['hasActiveCall'], false);
+      expect(debugInfo['androidVersion'], 34);
+      expect(debugInfo['hasCallForegroundService'], true);
     });
   });
 

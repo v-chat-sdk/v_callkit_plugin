@@ -101,17 +101,46 @@ class CallForegroundService : Service() {
                     )
                 }
                 
-                // Create call type text
+                // Create call type text with translations
                 val callTypeText = when (callType) {
-                    "outgoing" -> "Outgoing ${if (callData.isVideoCall) "video" else "voice"} call"
-                    "incoming" -> "Incoming ${if (callData.isVideoCall) "video" else "voice"} call"
-                    else -> "Ongoing ${if (callData.isVideoCall) "video" else "voice"} call"
+                    "outgoing" -> {
+                        val outgoingText = VCallkitPlugin.getTranslatedText("callInProgressText", "Outgoing")
+                        val callText = if (callData.isVideoCall) {
+                            VCallkitPlugin.getTranslatedText("videoCallText", "video")
+                        } else {
+                            VCallkitPlugin.getTranslatedText("voiceCallText", "voice")
+                        }
+                        val ongoingText = VCallkitPlugin.getTranslatedText("ongoingCallText", "call")
+                        "$outgoingText $callText $ongoingText"
+                    }
+                    "incoming" -> {
+                        val incomingText = VCallkitPlugin.getTranslatedText("incomingCallLabel", "Incoming")
+                        val callText = if (callData.isVideoCall) {
+                            VCallkitPlugin.getTranslatedText("videoCallText", "video")
+                        } else {
+                            VCallkitPlugin.getTranslatedText("voiceCallText", "voice")
+                        }
+                        val ongoingText = VCallkitPlugin.getTranslatedText("ongoingCallText", "call")
+                        "$incomingText $callText $ongoingText"
+                    }
+                    else -> {
+                        val ongoingTextPrefix = VCallkitPlugin.getTranslatedText("callInProgressText", "Ongoing")
+                        val callText = if (callData.isVideoCall) {
+                            VCallkitPlugin.getTranslatedText("videoCallText", "video")
+                        } else {
+                            VCallkitPlugin.getTranslatedText("voiceCallText", "voice")
+                        }
+                        val ongoingText = VCallkitPlugin.getTranslatedText("ongoingCallText", "call")
+                        "$ongoingTextPrefix $callText $ongoingText"
+                    }
                 }
+                val tapToReturnText = VCallkitPlugin.getTranslatedText("tapToReturnText", "Tap to return to call")
+                val hangupText = VCallkitPlugin.getTranslatedText("hangupButtonText", "Hang Up")
                 
                 // Create non-dismissible ongoing notification for legacy Android versions
                 val notificationBuilder = androidx.core.app.NotificationCompat.Builder(context, VCallkitPlugin.ONGOING_CALL_NOTIFICATION_CHANNEL_ID)
                     .setContentTitle(callData.callerName)
-                    .setContentText("Tap to return to call")
+                    .setContentText(tapToReturnText)
                     .setSubText(callTypeText)
                     .setSmallIcon(android.R.drawable.ic_menu_call)
                     .setOngoing(true) // CRITICAL: Makes it non-dismissible
@@ -121,7 +150,7 @@ class CallForegroundService : Service() {
                     .setContentIntent(appLaunchPendingIntent)
                     .addAction(
                         android.R.drawable.ic_menu_close_clear_cancel,
-                        "Hang Up",
+                        hangupText,
                         hangupPendingIntent
                     )
                     .setDeleteIntent(null) // CRITICAL: Disable swipe-to-dismiss
@@ -130,7 +159,7 @@ class CallForegroundService : Service() {
                     .setDefaults(0) // No sound, vibration for ongoing calls
                     .setStyle(
                         androidx.core.app.NotificationCompat.BigTextStyle()
-                            .bigText("Tap to return to call")
+                            .bigText(tapToReturnText)
                             .setBigContentTitle(callData.callerName)
                             .setSummaryText(callTypeText)
                     )
@@ -214,11 +243,15 @@ class CallForegroundService : Service() {
                     notificationManager.createNotificationChannel(channel)
                 }
                 
+                // Get translated text
+                val tapToReturnText = VCallkitPlugin.getTranslatedText("tapToReturnText", "Tap to return to call")
+                val ongoingCallText = VCallkitPlugin.getTranslatedText("callInProgressText", "Ongoing call")
+                
                 // Create non-dismissible ongoing notification without foreground service
                 val notification = androidx.core.app.NotificationCompat.Builder(context, VCallkitPlugin.ONGOING_CALL_NOTIFICATION_CHANNEL_ID)
                     .setContentTitle(callData.callerName)
-                    .setContentText("Tap to return to call")
-                    .setSubText("Ongoing call")
+                    .setContentText(tapToReturnText)
+                    .setSubText(ongoingCallText)
                     .setSmallIcon(android.R.drawable.ic_menu_call)
                     .setOngoing(true)
                     .setAutoCancel(false)
@@ -228,9 +261,9 @@ class CallForegroundService : Service() {
                     .setDefaults(0) // No sound, vibration for ongoing calls
                     .setStyle(
                         androidx.core.app.NotificationCompat.BigTextStyle()
-                            .bigText("Tap to return to call")
+                            .bigText(tapToReturnText)
                             .setBigContentTitle(callData.callerName)
-                            .setSummaryText("Ongoing call")
+                            .setSummaryText(ongoingCallText)
                     )
                     .build()
                 

@@ -36,10 +36,21 @@ class VCallkitPlugin {
   late final Stream<CallMuteEvent> _onCallMute;
   late final Stream<CallStateChangedEvent> _onCallStateChanged;
 
+  // Enhanced streams for customization
+  late final Stream<Map<String, dynamic>> _onCallConfigurationChanged;
+  late final Stream<Map<String, dynamic>> _onCallTimerUpdated;
+  late final Stream<Map<String, dynamic>> _onCallAudioDeviceChanged;
+
   /// Stream of all call events
   late final Stream<CallEvent> _onCallEvent;
 
+  /// Stream of all enhanced events (including configuration and timer updates)
+  late final Stream<Map<String, dynamic>> _onAllEvents;
+
   bool _initialized = false;
+
+  // Global UI configuration storage
+  Map<String, dynamic> _globalUIConfiguration = {};
 
   // Public API - Initialization and Lifecycle
 
@@ -95,10 +106,34 @@ class VCallkitPlugin {
     return _onCallStateChanged;
   }
 
+  /// Stream of call configuration change events
+  Stream<Map<String, dynamic>> get onCallConfigurationChanged {
+    _ensureInitialized();
+    return _onCallConfigurationChanged;
+  }
+
+  /// Stream of call timer update events
+  Stream<Map<String, dynamic>> get onCallTimerUpdated {
+    _ensureInitialized();
+    return _onCallTimerUpdated;
+  }
+
+  /// Stream of call audio device change events
+  Stream<Map<String, dynamic>> get onCallAudioDeviceChanged {
+    _ensureInitialized();
+    return _onCallAudioDeviceChanged;
+  }
+
   /// Stream of all call events
   Stream<CallEvent> get onCallEvent {
     _ensureInitialized();
     return _onCallEvent;
+  }
+
+  /// Stream of all enhanced events including configuration and timer updates
+  Stream<Map<String, dynamic>> get onAllEvents {
+    _ensureInitialized();
+    return _onAllEvents;
   }
 
   // Public API - Basic Call Operations
@@ -122,6 +157,33 @@ class VCallkitPlugin {
   /// Show an incoming call with the provided call data
   Future<bool> showIncomingCall(CallData callData) {
     return VCallkitPluginPlatform.instance.showIncomingCall(callData.toMap());
+  }
+
+  /// Show an incoming call with custom configuration
+  /// This allows per-call customization overriding global settings
+  Future<bool> showIncomingCallWithConfig(Map<String, dynamic> data) {
+    return VCallkitPluginPlatform.instance.showIncomingCallWithConfig(data);
+  }
+
+  /// Set global UI configuration for all call screens
+  /// This includes themes, translations, and behavior settings
+  Future<bool> setUIConfiguration(Map<String, dynamic> config) {
+    _globalUIConfiguration = Map<String, dynamic>.from(config);
+    return VCallkitPluginPlatform.instance.setUIConfiguration(config);
+  }
+
+  /// Get the current global UI configuration
+  Map<String, dynamic> get globalUIConfiguration =>
+      Map<String, dynamic>.from(_globalUIConfiguration);
+
+  /// Force show hangup notification for testing purposes
+  Future<bool> forceShowHangupNotification(Map<String, dynamic> data) {
+    return VCallkitPluginPlatform.instance.forceShowHangupNotification(data);
+  }
+
+  /// Get debug information about the call manager state
+  Future<Map<String, dynamic>> getCallManagerDebugInfo() {
+    return VCallkitPluginPlatform.instance.getCallManagerDebugInfo();
   }
 
   /// End the current call
@@ -245,7 +307,7 @@ class VCallkitPlugin {
     return VCallkitPluginPlatform.instance.stopCallForegroundService();
   }
 
-  // Public API - Convenience Methods
+  // Public API - Enhanced Convenience Methods
 
   /// Show an incoming voice call with minimal setup
   Future<bool> showIncomingVoiceCall({
@@ -254,6 +316,7 @@ class VCallkitPlugin {
     required String callerNumber,
     String? callerAvatar,
     Map<String, dynamic> extra = const {},
+    Map<String, dynamic>? customConfig,
   }) {
     return _showIncomingCallWithType(
       callId: callId,
@@ -262,6 +325,7 @@ class VCallkitPlugin {
       callerAvatar: callerAvatar,
       isVideoCall: false,
       extra: extra,
+      customConfig: customConfig,
     );
   }
 
@@ -272,6 +336,7 @@ class VCallkitPlugin {
     required String callerNumber,
     String? callerAvatar,
     Map<String, dynamic> extra = const {},
+    Map<String, dynamic>? customConfig,
   }) {
     return _showIncomingCallWithType(
       callId: callId,
@@ -280,7 +345,77 @@ class VCallkitPlugin {
       callerAvatar: callerAvatar,
       isVideoCall: true,
       extra: extra,
+      customConfig: customConfig,
     );
+  }
+
+  /// Show an incoming call with comprehensive configuration
+  Future<bool> showIncomingCallWithFullConfig({
+    String? callId,
+    required String callerName,
+    required String callerNumber,
+    String? callerAvatar,
+    required bool isVideoCall,
+    Map<String, dynamic> extra = const {},
+
+    // Theme customization
+    String? backgroundColor,
+    String? accentColor,
+    String? textColor,
+    String? secondaryTextColor,
+
+    // Text translations
+    String? answerButtonText,
+    String? declineButtonText,
+    String? hangupButtonText,
+    String? incomingCallText,
+    String? callInProgressText,
+
+    // Behavior settings
+    bool? showCallerNumber,
+    bool? enableVibration,
+    bool? enableRingtone,
+    bool? showCallDuration,
+    int? callTimeoutSeconds,
+  }) {
+    final callData = CallData(
+      id: callId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      callerName: callerName,
+      callerNumber: callerNumber,
+      callerAvatar: callerAvatar,
+      isVideoCall: isVideoCall,
+      extra: extra,
+    );
+
+    final config = <String, dynamic>{
+      // Merge global configuration
+      ..._globalUIConfiguration,
+
+      // Apply theme customization if provided
+      if (backgroundColor != null) 'backgroundColor': backgroundColor,
+      if (accentColor != null) 'accentColor': accentColor,
+      if (textColor != null) 'textColor': textColor,
+      if (secondaryTextColor != null) 'secondaryTextColor': secondaryTextColor,
+
+      // Apply text translations if provided
+      if (answerButtonText != null) 'answerButtonText': answerButtonText,
+      if (declineButtonText != null) 'declineButtonText': declineButtonText,
+      if (hangupButtonText != null) 'hangupButtonText': hangupButtonText,
+      if (incomingCallText != null) 'incomingCallText': incomingCallText,
+      if (callInProgressText != null) 'callInProgressText': callInProgressText,
+
+      // Apply behavior settings if provided
+      if (showCallerNumber != null) 'showCallerNumber': showCallerNumber,
+      if (enableVibration != null) 'enableVibration': enableVibration,
+      if (enableRingtone != null) 'enableRingtone': enableRingtone,
+      if (showCallDuration != null) 'showCallDuration': showCallDuration,
+      if (callTimeoutSeconds != null) 'callTimeoutSeconds': callTimeoutSeconds,
+    };
+
+    return showIncomingCallWithConfig({
+      'callData': callData.toMap(),
+      'config': config,
+    });
   }
 
   // Public API - Event Filtering
@@ -298,6 +433,77 @@ class VCallkitPlugin {
   /// Listen to call ended events for a specific call
   Stream<CallEndedEvent> listenToCallEnded([String? callId]) {
     return _filterStreamByCallId(onCallEnded, callId);
+  }
+
+  /// Listen to timer updates for a specific call
+  Stream<Map<String, dynamic>> listenToCallTimer([String? callId]) {
+    return onCallTimerUpdated
+        .where((event) => callId == null || event['callId'] == callId);
+  }
+
+  /// Listen to configuration changes
+  Stream<Map<String, dynamic>> get onConfigurationChanged =>
+      onCallConfigurationChanged;
+
+  // Public API - Advanced Configuration Helpers
+
+  /// Create a theme configuration map
+  static Map<String, dynamic> createTheme({
+    required String backgroundColor,
+    required String accentColor,
+    required String textColor,
+    required String secondaryTextColor,
+  }) {
+    return {
+      'backgroundColor': backgroundColor,
+      'accentColor': accentColor,
+      'textColor': textColor,
+      'secondaryTextColor': secondaryTextColor,
+    };
+  }
+
+  /// Create a translation configuration map
+  static Map<String, dynamic> createTranslation({
+    required String answerButtonText,
+    required String declineButtonText,
+    required String hangupButtonText,
+    required String incomingVoiceCallText,
+    required String incomingVideoCallText,
+    required String callInProgressText,
+    String? tapToReturnText,
+    String? unknownCallerText,
+  }) {
+    return {
+      'answerButtonText': answerButtonText,
+      'declineButtonText': declineButtonText,
+      'hangupButtonText': hangupButtonText,
+      'incomingVoiceCallText': incomingVoiceCallText,
+      'incomingVideoCallText': incomingVideoCallText,
+      'callInProgressText': callInProgressText,
+      'tapToReturnText': tapToReturnText ?? 'Tap to return to call',
+      'unknownCallerText': unknownCallerText ?? 'Unknown',
+    };
+  }
+
+  /// Create a behavior configuration map
+  static Map<String, dynamic> createBehaviorConfig({
+    bool showCallerNumber = true,
+    bool enableVibration = true,
+    bool enableRingtone = true,
+    bool showCallDuration = true,
+    int callTimeoutSeconds = 60,
+    bool enableCallTimeout = true,
+    bool useFullScreenCallUI = true,
+  }) {
+    return {
+      'showCallerNumber': showCallerNumber,
+      'enableVibration': enableVibration,
+      'enableRingtone': enableRingtone,
+      'showCallDuration': showCallDuration,
+      'callTimeoutSeconds': callTimeoutSeconds,
+      'enableCallTimeout': enableCallTimeout,
+      'useFullScreenCallUI': useFullScreenCallUI,
+    };
   }
 
   // Private helper methods
@@ -328,6 +534,12 @@ class VCallkitPlugin {
       (data) => CallStateChangedEvent.fromMap(data),
     );
 
+    // Enhanced streams
+    _onCallConfigurationChanged =
+        _methodChannelPlugin.onCallConfigurationChanged;
+    _onCallTimerUpdated = _methodChannelPlugin.onCallTimerUpdated;
+    _onCallAudioDeviceChanged = _methodChannelPlugin.onCallAudioDeviceChanged;
+
     // Combined event stream
     _onCallEvent = StreamGroup.merge([
       _onCallAnswered,
@@ -336,6 +548,19 @@ class VCallkitPlugin {
       _onCallHold,
       _onCallMute,
       _onCallStateChanged,
+    ]);
+
+    // Combined enhanced events stream
+    _onAllEvents = StreamGroup.merge([
+      _onCallAnswered.map((e) => e.toMap()),
+      _onCallRejected.map((e) => e.toMap()),
+      _onCallEnded.map((e) => e.toMap()),
+      _onCallHold.map((e) => e.toMap()),
+      _onCallMute.map((e) => e.toMap()),
+      _onCallStateChanged.map((e) => e.toMap()),
+      _onCallConfigurationChanged,
+      _onCallTimerUpdated,
+      _onCallAudioDeviceChanged,
     ]);
   }
 
@@ -346,7 +571,7 @@ class VCallkitPlugin {
     }
   }
 
-  /// Helper method to create call data and show incoming call
+  /// Helper method to create call data and show incoming call with optional custom config
   Future<bool> _showIncomingCallWithType({
     String? callId,
     required String callerName,
@@ -354,6 +579,7 @@ class VCallkitPlugin {
     String? callerAvatar,
     required bool isVideoCall,
     Map<String, dynamic> extra = const {},
+    Map<String, dynamic>? customConfig,
   }) {
     final callData = CallData(
       id: callId ?? DateTime.now().millisecondsSinceEpoch.toString(),
@@ -363,6 +589,16 @@ class VCallkitPlugin {
       isVideoCall: isVideoCall,
       extra: extra,
     );
+
+    if (customConfig != null) {
+      return showIncomingCallWithConfig({
+        'callData': callData.toMap(),
+        'config': {
+          ..._globalUIConfiguration,
+          ...customConfig,
+        },
+      });
+    }
 
     return showIncomingCall(callData);
   }

@@ -24,6 +24,16 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
   final StreamController<Map<String, dynamic>> _callStateChangedController =
       StreamController<Map<String, dynamic>>.broadcast();
 
+  // Enhanced stream controllers for more events
+  final StreamController<Map<String, dynamic>>
+      _callConfigurationChangedController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<Map<String, dynamic>> _callTimerUpdatedController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<Map<String, dynamic>>
+      _callAudioDeviceChangedController =
+      StreamController<Map<String, dynamic>>.broadcast();
+
   MethodChannelVCallkitPlugin() {
     // Set up method call handler for callbacks from native side
     methodChannel.setMethodCallHandler(_handleMethodCall);
@@ -54,6 +64,15 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
       case 'onCallStateChanged':
         _callStateChangedController.add(arguments);
         break;
+      case 'onCallConfigurationChanged':
+        _callConfigurationChangedController.add(arguments);
+        break;
+      case 'onCallTimerUpdated':
+        _callTimerUpdatedController.add(arguments);
+        break;
+      case 'onCallAudioDeviceChanged':
+        _callAudioDeviceChangedController.add(arguments);
+        break;
       default:
         if (kDebugMode) {
           print('Unknown method call: ${call.method}');
@@ -83,6 +102,18 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
   /// Stream of call state change events
   Stream<Map<String, dynamic>> get onCallStateChanged =>
       _callStateChangedController.stream;
+
+  /// Stream of call configuration change events
+  Stream<Map<String, dynamic>> get onCallConfigurationChanged =>
+      _callConfigurationChangedController.stream;
+
+  /// Stream of call timer update events
+  Stream<Map<String, dynamic>> get onCallTimerUpdated =>
+      _callTimerUpdatedController.stream;
+
+  /// Stream of call audio device change events
+  Stream<Map<String, dynamic>> get onCallAudioDeviceChanged =>
+      _callAudioDeviceChangedController.stream;
 
   @override
   Future<String?> getPlatformVersion() async {
@@ -115,6 +146,41 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
       callData,
     );
     return success ?? false;
+  }
+
+  @override
+  Future<bool> showIncomingCallWithConfig(Map<String, dynamic> data) async {
+    final success = await methodChannel.invokeMethod<bool>(
+      'showIncomingCallWithConfig',
+      data,
+    );
+    return success ?? false;
+  }
+
+  @override
+  Future<bool> setUIConfiguration(Map<String, dynamic> config) async {
+    final success = await methodChannel.invokeMethod<bool>(
+      'setUIConfiguration',
+      config,
+    );
+    return success ?? false;
+  }
+
+  @override
+  Future<bool> forceShowHangupNotification(Map<String, dynamic> data) async {
+    final success = await methodChannel.invokeMethod<bool>(
+      'forceShowHangupNotification',
+      data,
+    );
+    return success ?? false;
+  }
+
+  @override
+  Future<Map<String, dynamic>> getCallManagerDebugInfo() async {
+    final result = await methodChannel.invokeMethod<Map<Object?, Object?>>(
+      'getCallManagerDebugInfo',
+    );
+    return result != null ? _safeMapConvert(result) : {};
   }
 
   @override
@@ -306,5 +372,8 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
     _callHoldController.close();
     _callMuteController.close();
     _callStateChangedController.close();
+    _callConfigurationChangedController.close();
+    _callTimerUpdatedController.close();
+    _callAudioDeviceChangedController.close();
   }
 }

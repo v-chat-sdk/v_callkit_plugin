@@ -42,6 +42,29 @@ abstract class VCallkitPluginPlatform extends PlatformInterface {
     throw UnimplementedError('showIncomingCall() has not been implemented.');
   }
 
+  /// Shows an incoming call with custom configuration
+  Future<bool> showIncomingCallWithConfig(Map<String, dynamic> data) {
+    throw UnimplementedError(
+        'showIncomingCallWithConfig() has not been implemented.');
+  }
+
+  /// Sets global UI configuration for all call screens
+  Future<bool> setUIConfiguration(Map<String, dynamic> config) {
+    throw UnimplementedError('setUIConfiguration() has not been implemented.');
+  }
+
+  /// Forces display of hangup notification for testing
+  Future<bool> forceShowHangupNotification(Map<String, dynamic> data) {
+    throw UnimplementedError(
+        'forceShowHangupNotification() has not been implemented.');
+  }
+
+  /// Gets debug information about the call manager
+  Future<Map<String, dynamic>> getCallManagerDebugInfo() {
+    throw UnimplementedError(
+        'getCallManagerDebugInfo() has not been implemented.');
+  }
+
   /// Ends the current call
   Future<bool> endCall([String? callId]) {
     throw UnimplementedError('endCall() has not been implemented.');
@@ -87,61 +110,51 @@ abstract class VCallkitPluginPlatform extends PlatformInterface {
     throw UnimplementedError('getSystemRingtones() has not been implemented.');
   }
 
-  /// Check if battery optimization is ignored
+  /// Checks if battery optimization is ignored
   Future<bool> checkBatteryOptimization() {
     throw UnimplementedError(
-      'checkBatteryOptimization() has not been implemented.',
-    );
+        'checkBatteryOptimization() has not been implemented.');
   }
 
-  /// Request to ignore battery optimization
+  /// Requests to ignore battery optimization
   Future<bool> requestBatteryOptimization() {
     throw UnimplementedError(
-      'requestBatteryOptimization() has not been implemented.',
-    );
+        'requestBatteryOptimization() has not been implemented.');
   }
 
-  /// Get device manufacturer
+  /// Gets device manufacturer
   Future<String> getDeviceManufacturer() {
     throw UnimplementedError(
-      'getDeviceManufacturer() has not been implemented.',
-    );
+        'getDeviceManufacturer() has not been implemented.');
   }
 
-  /// Get the last call action that launched the app
+  /// Gets the last call action that launched the app
   Future<Map<String, dynamic>?> getLastCallActionLaunch() {
     throw UnimplementedError(
-      'getLastCallActionLaunch() has not been implemented.',
-    );
+        'getLastCallActionLaunch() has not been implemented.');
   }
 
-  /// Check if the app was launched from a call notification action
+  /// Checks if the app was launched from a call notification action
   Future<bool> hasCallActionLaunchData() {
     throw UnimplementedError(
-      'hasCallActionLaunchData() has not been implemented.',
-    );
+        'hasCallActionLaunchData() has not been implemented.');
   }
 
-  /// Clear any stored call action launch data
+  /// Clears any stored call action launch data
   Future<bool> clearCallActionLaunchData() {
     throw UnimplementedError(
-      'clearCallActionLaunchData() has not been implemented.',
-    );
+        'clearCallActionLaunchData() has not been implemented.');
   }
 
-  /// Start foreground service for outgoing calls
-  /// This creates a persistent notification for outgoing calls once they are accepted
+  /// Starts persistent notification for outgoing calls
   Future<bool> startOutgoingCallNotification(Map<String, dynamic> callData) {
     throw UnimplementedError(
-      'startOutgoingCallNotification() has not been implemented.',
-    );
+        'startOutgoingCallNotification() has not been implemented.');
   }
 
-  /// Stop the call foreground service
-  /// This stops any active foreground service and removes the persistent notification
+  /// Stops the call foreground service
   Future<bool> stopCallForegroundService() {
     throw UnimplementedError(
-      'stopCallForegroundService() has not been implemented.',
-    );
+        'stopCallForegroundService() has not been implemented.');
   }
 }

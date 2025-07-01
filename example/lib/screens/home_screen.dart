@@ -17,6 +17,7 @@ import '../widgets/error_dialog_widget.dart';
 import '../widgets/ringtone_selection_widget.dart';
 import '../widgets/battery_optimization_widget.dart';
 import '../widgets/outgoing_call_demo_widget.dart';
+import '../widgets/customization_demo_navigation_widget.dart';
 import '../models/sample_caller.dart';
 import '../utils/app_colors.dart';
 
@@ -425,6 +426,7 @@ class _HomeScreenState extends State<HomeScreen> {
               activeCallData: _activeCallData,
               platformVersion: _platformVersion,
             ),
+            const CustomizationDemoNavigationWidget(),
             CallSimulationWidget(
               hasPermissions: _hasPermissions,
               onVoiceCallSimulation: () => _showIncomingCall(isVideo: false),

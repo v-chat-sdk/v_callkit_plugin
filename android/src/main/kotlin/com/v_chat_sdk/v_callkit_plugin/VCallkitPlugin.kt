@@ -61,6 +61,35 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         @JvmStatic
         private var lastCallActionLaunch: CallActionLaunchData? = null
         
+        // UI Configuration storage for translations and customizations
+        @JvmStatic
+        private var uiConfiguration: Map<String, Any> = emptyMap()
+        
+        /**
+         * Static method to get translated text with fallback to default English
+         */
+        @JvmStatic
+        fun getTranslatedText(key: String, fallback: String): String {
+            return uiConfiguration[key] as? String ?: fallback
+        }
+        
+        /**
+         * Static method to get UI configuration value
+         */
+        @JvmStatic
+        fun getUIConfigValue(key: String, fallback: Any): Any {
+            return uiConfiguration[key] ?: fallback
+        }
+        
+        /**
+         * Static method to set UI configuration
+         */
+        @JvmStatic
+        fun setUIConfiguration(config: Map<String, Any>) {
+            uiConfiguration = config
+            Log.d(TAG, "UI Configuration updated: ${config.keys}")
+        }
+        
         /**
          * Static method to stop call sounds from anywhere (like BroadcastReceiver)
          */
@@ -209,6 +238,9 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             "showIncomingCall" -> {
                 handleShowIncomingCall(call, result)
             }
+            "showIncomingCallWithConfig" -> {
+                handleShowIncomingCallWithConfig(call, result)
+            }
             "showIncomingCallNative" -> {
                 handleShowIncomingCallNative(call, result)
             }
@@ -260,6 +292,9 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             "forceShowOngoingNotification" -> {
                 handleForceShowOngoingNotification(call, result)
             }
+            "forceShowHangupNotification" -> {
+                handleForceShowHangupNotification(call, result)
+            }
             "showHangupNotification" -> {
                 handleShowHangupNotification(call, result)
             }
@@ -306,7 +341,7 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
                 "Incoming Calls",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Notifications for incoming VoIP calls"
+                description = "Notifications for incoming VoIP calls - respects system silent mode and Do Not Disturb settings"
                 setShowBadge(false)
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
                 enableVibration(true)
@@ -319,8 +354,8 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
                     .build()
                 setSound(ringtoneUri, audioAttributes)
                 
-                // Make it bypass Do Not Disturb
-                setBypassDnd(true)
+                // Respect Do Not Disturb settings - let user control this in system settings
+                setBypassDnd(false)
             }
             
             // Ongoing calls channel (default priority, no sound, non-dismissible)
@@ -546,10 +581,19 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         // Get ringtone URI
         val ringtoneUri = customRingtoneUri ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
         
+        // Get translated text
+        val incomingCallText = if (callData.isVideoCall) {
+            getTranslatedText("incomingVideoCallText", "Incoming video call")
+        } else {
+            getTranslatedText("incomingVoiceCallText", "Incoming voice call")
+        }
+        val answerText = getTranslatedText("answerButtonText", "Answer")
+        val declineText = getTranslatedText("declineButtonText", "Decline")
+        
         // Build the notification
         val notificationBuilder = NotificationCompat.Builder(context, CALL_NOTIFICATION_CHANNEL_ID)
             .setContentTitle(callData.callerName)
-            .setContentText("Incoming ${if (callData.isVideoCall) "video" else "voice"} call")
+            .setContentText(incomingCallText)
             .setSmallIcon(android.R.drawable.ic_menu_call)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_CALL)
@@ -559,23 +603,29 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             .setFullScreenIntent(fullScreenPendingIntent, true)
             .addAction(
                 android.R.drawable.ic_menu_close_clear_cancel, 
-                "Decline", 
+                declineText, 
                 declinePendingIntent
             )
             .addAction(
                 android.R.drawable.ic_menu_call, 
-                "Answer", 
+                answerText, 
                 answerPendingIntent
             )
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setColorized(true) // For API 30 and below to get higher priority
             .setColor(ContextCompat.getColor(context, android.R.color.holo_green_dark))
             
-        // Add sound and vibration for older Android versions
+        // Add sound and vibration for older Android versions (respecting system settings)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            notificationBuilder
-                .setSound(ringtoneUri, AudioManager.STREAM_RING)
-                .setVibrate(longArrayOf(0, 1000, 500, 1000))
+            // Only add sound if system allows ringtone
+            if (shouldPlayRingtone()) {
+                notificationBuilder.setSound(ringtoneUri, AudioManager.STREAM_RING)
+            }
+            
+            // Only add vibration if system allows vibration
+            if (shouldVibrate()) {
+                notificationBuilder.setVibrate(longArrayOf(0, 1000, 500, 1000))
+            }
         }
         
         val notification = notificationBuilder.build()
@@ -657,14 +707,26 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
     }
     
     private fun startCallVibration() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val pattern = longArrayOf(0, 1000, 500, 1000, 500, 1000)
-            val vibrationEffect = VibrationEffect.createWaveform(pattern, 0) // 0 means repeat
-            vibrator.vibrate(vibrationEffect)
-        } else {
-            @Suppress("DEPRECATION")
-            val pattern = longArrayOf(0, 1000, 500, 1000, 500, 1000)
-            vibrator.vibrate(pattern, 0) // 0 means repeat
+        try {
+            // Check if vibration should be played based on system settings
+            if (!shouldVibrate()) {
+                Log.d(TAG, "Vibration skipped due to system settings (silent mode, DND, or vibration disabled)")
+                return
+            }
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val pattern = longArrayOf(0, 1000, 500, 1000, 500, 1000)
+                val vibrationEffect = VibrationEffect.createWaveform(pattern, 0) // 0 means repeat
+                vibrator.vibrate(vibrationEffect)
+                Log.d(TAG, "Call vibration started (respecting system settings)")
+            } else {
+                @Suppress("DEPRECATION")
+                val pattern = longArrayOf(0, 1000, 500, 1000, 500, 1000)
+                vibrator.vibrate(pattern, 0) // 0 means repeat
+                Log.d(TAG, "Call vibration started (legacy mode, respecting system settings)")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error starting call vibration: ${e.message}")
         }
     }
     
@@ -857,6 +919,157 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         }
     }
     
+    // Helper methods for system audio state checking
+    
+    /**
+     * Checks if ringtone should be played based on system settings and user configuration
+     * Respects silent mode and Do Not Disturb settings
+     */
+    private fun shouldPlayRingtone(): Boolean {
+        try {
+            // Check if ringtone is disabled in UI configuration
+            val enableRingtone = getUIConfigValue("enableRingtone", true) as? Boolean ?: true
+            if (!enableRingtone) {
+                Log.d(TAG, "Ringtone blocked: Disabled in UI configuration")
+                return false
+            }
+            
+            val ringerMode = audioManager.ringerMode
+            
+            // Don't play ringtone if phone is in silent mode
+            if (ringerMode == AudioManager.RINGER_MODE_SILENT) {
+                Log.d(TAG, "Ringtone blocked: Phone is in silent mode")
+                return false
+            }
+            
+            // Check Do Not Disturb status (API 23+)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val interruptionFilter = notificationManager.currentInterruptionFilter
+                
+                // Block ringtone in strict DND modes
+                if (interruptionFilter == NotificationManager.INTERRUPTION_FILTER_NONE) {
+                    Log.d(TAG, "Ringtone blocked: Do Not Disturb - Total silence mode")
+                    return false
+                }
+                
+                if (interruptionFilter == NotificationManager.INTERRUPTION_FILTER_ALARMS) {
+                    Log.d(TAG, "Ringtone blocked: Do Not Disturb - Alarms only mode")
+                    return false
+                }
+                
+                // In priority mode, allow if calls are permitted or if we can bypass DND
+                if (interruptionFilter == NotificationManager.INTERRUPTION_FILTER_PRIORITY) {
+                    // Check if we have DND policy access to determine if calls are allowed
+                    if (notificationManager.isNotificationPolicyAccessGranted) {
+                        val policy = notificationManager.notificationPolicy
+                        val callsAllowed = (policy.priorityCategories and NotificationManager.Policy.PRIORITY_CATEGORY_CALLS) != 0
+                        if (!callsAllowed) {
+                            Log.d(TAG, "Ringtone blocked: Do Not Disturb - Priority mode without calls")
+                            return false
+                        }
+                    } else {
+                        Log.d(TAG, "Ringtone blocked: Do Not Disturb - Priority mode (no policy access)")
+                        return false
+                    }
+                }
+            }
+            
+            // Check if ringtone volume is zero
+            val ringtoneVolume = audioManager.getStreamVolume(AudioManager.STREAM_RING)
+            if (ringtoneVolume == 0) {
+                Log.d(TAG, "Ringtone blocked: Ringtone volume is set to zero")
+                return false
+            }
+            
+            return true
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking ringtone conditions: ${e.message}")
+            return false
+        }
+    }
+    
+    /**
+     * Checks if vibration should be activated based on system settings and user configuration
+     * Respects ringer mode and Do Not Disturb settings
+     */
+    private fun shouldVibrate(): Boolean {
+        try {
+            // Check if vibration is disabled in UI configuration
+            val enableVibration = getUIConfigValue("enableVibration", true) as? Boolean ?: true
+            if (!enableVibration) {
+                Log.d(TAG, "Vibration blocked: Disabled in UI configuration")
+                return false
+            }
+            
+            val ringerMode = audioManager.ringerMode
+            
+            // Allow vibration in vibrate mode, block in silent mode
+            if (ringerMode == AudioManager.RINGER_MODE_SILENT) {
+                Log.d(TAG, "Vibration blocked: Phone is in silent mode")
+                return false
+            }
+            
+            // Check Do Not Disturb status (API 23+)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val interruptionFilter = notificationManager.currentInterruptionFilter
+                
+                // Block vibration in strict DND modes
+                if (interruptionFilter == NotificationManager.INTERRUPTION_FILTER_NONE) {
+                    Log.d(TAG, "Vibration blocked: Do Not Disturb - Total silence mode")
+                    return false
+                }
+                
+                if (interruptionFilter == NotificationManager.INTERRUPTION_FILTER_ALARMS) {
+                    Log.d(TAG, "Vibration blocked: Do Not Disturb - Alarms only mode")
+                    return false
+                }
+                
+                // In priority mode, check if calls are allowed
+                if (interruptionFilter == NotificationManager.INTERRUPTION_FILTER_PRIORITY) {
+                    if (notificationManager.isNotificationPolicyAccessGranted) {
+                        val policy = notificationManager.notificationPolicy
+                        val callsAllowed = (policy.priorityCategories and NotificationManager.Policy.PRIORITY_CATEGORY_CALLS) != 0
+                        if (!callsAllowed) {
+                            Log.d(TAG, "Vibration blocked: Do Not Disturb - Priority mode without calls")
+                            return false
+                        }
+                    } else {
+                        Log.d(TAG, "Vibration blocked: Do Not Disturb - Priority mode (no policy access)")
+                        return false
+                    }
+                }
+            }
+            
+            // Check if device has vibrator capability
+            if (!vibrator.hasVibrator()) {
+                Log.d(TAG, "Vibration blocked: Device has no vibrator")
+                return false
+            }
+            
+            // For API 26+, check if vibration is enabled in settings
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                try {
+                    val vibrationSetting = Settings.System.getInt(
+                        context.contentResolver,
+                        Settings.System.VIBRATE_WHEN_RINGING,
+                        1
+                    )
+                    if (vibrationSetting == 0) {
+                        Log.d(TAG, "Vibration blocked: System vibration for calls is disabled")
+                        return false
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Could not check vibration setting: ${e.message}")
+                }
+            }
+            
+            return true
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking vibration conditions: ${e.message}")
+            return false
+        }
+    }
+    
     // Battery optimization handling
     private fun isBatteryOptimizationIgnored(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -915,6 +1128,12 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
     // Enhanced ringtone playback for custom ROMs
     private fun startRingtonePlayback() {
         try {
+            // Check if ringtone should be played based on system settings
+            if (!shouldPlayRingtone()) {
+                Log.d(TAG, "Ringtone playback skipped due to system settings (silent mode or DND)")
+                return
+            }
+            
             // Stop any existing playback
             stopRingtonePlayback()
             
@@ -935,14 +1154,11 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
                     setDataSource(context, ringtoneUri)
                     isLooping = true
                     
-                    // Ensure volume is at max for ringtone stream
-                    val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_RING)
-                    audioManager.setStreamVolume(AudioManager.STREAM_RING, maxVolume, 0)
-                    
+                    // Don't override user's volume settings - respect current volume level
                     prepare()
                     start()
                     
-                    Log.d(TAG, "MediaPlayer ringtone started for ${Build.MANUFACTURER}")
+                    Log.d(TAG, "MediaPlayer ringtone started for ${Build.MANUFACTURER} (respecting system volume)")
                 }
             } else {
                 // Use standard Ringtone for other devices
@@ -951,7 +1167,7 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
                         isLooping = true
                     }
                     play()
-                    Log.d(TAG, "Standard ringtone started")
+                    Log.d(TAG, "Standard ringtone started (respecting system volume)")
                 }
             }
         } catch (e: Exception) {
@@ -1131,11 +1347,20 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         // Format duration
         val durationText = formatCallDuration(durationSeconds)
         
+        // Get translated text
+        val callTypeText = if (callData.isVideoCall) {
+            getTranslatedText("videoCallText", "Video")
+        } else {
+            getTranslatedText("voiceCallText", "Voice")
+        }
+        val ongoingText = getTranslatedText("ongoingCallText", "call")
+        val tapToReturnText = getTranslatedText("tapToReturnText", "Tap to return to call")
+        
         // Create ongoing call notification with CallStyle - CRITICAL: setOngoing(true) must be in builder
         val builder = Notification.Builder(context, ONGOING_CALL_NOTIFICATION_CHANNEL_ID)
             .setContentTitle(callData.callerName)
-            .setContentText("${if (callData.isVideoCall) "Video" else "Voice"} call • $durationText")
-            .setSubText("Tap to return to call")
+            .setContentText("$callTypeText $ongoingText • $durationText")
+            .setSubText(tapToReturnText)
             .setSmallIcon(android.R.drawable.ic_menu_call)
             .setContentIntent(appLaunchPendingIntent)
             .setStyle(
@@ -1194,11 +1419,21 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         // Format duration
         val durationText = formatCallDuration(durationSeconds)
         
+        // Get translated text
+        val callTypeText = if (callData.isVideoCall) {
+            getTranslatedText("videoCallText", "Video")
+        } else {
+            getTranslatedText("voiceCallText", "Voice")
+        }
+        val ongoingText = getTranslatedText("ongoingCallText", "call")
+        val tapToReturnText = getTranslatedText("tapToReturnText", "Tap to return to call")
+        val hangupText = getTranslatedText("hangupButtonText", "Hang Up")
+        
         // Build the ongoing call notification with duration - for Android 11 and below
         val notification = NotificationCompat.Builder(context, ONGOING_CALL_NOTIFICATION_CHANNEL_ID)
             .setContentTitle(callData.callerName)
-            .setContentText("${if (callData.isVideoCall) "Video" else "Voice"} call • $durationText")
-            .setSubText("Tap to return to call")
+            .setContentText("$callTypeText $ongoingText • $durationText")
+            .setSubText(tapToReturnText)
             .setSmallIcon(android.R.drawable.ic_menu_call)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setCategory(NotificationCompat.CATEGORY_CALL)
@@ -1208,7 +1443,7 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             .setContentIntent(appLaunchPendingIntent)
             .addAction(
                 android.R.drawable.ic_menu_close_clear_cancel,
-                "Hang Up",
+                hangupText,
                 hangupPendingIntent
             )
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -1268,16 +1503,45 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
                 )
                 
                 val durationText = formatCallDuration(durationSeconds)
+                
+                // Get translated text for different call types
                 val callTypeText = when (callType) {
-                    "outgoing" -> "Outgoing ${if (callData.isVideoCall) "video" else "voice"} call"
-                    "incoming" -> "Incoming ${if (callData.isVideoCall) "video" else "voice"} call"
-                    else -> "${if (callData.isVideoCall) "Video" else "Voice"} call"
+                    "outgoing" -> {
+                        val outgoingText = getTranslatedText("outgoingCallText", "Outgoing")
+                        val callText = if (callData.isVideoCall) {
+                            getTranslatedText("videoCallText", "video")
+                        } else {
+                            getTranslatedText("voiceCallText", "voice")
+                        }
+                        val ongoingText = getTranslatedText("ongoingCallText", "call")
+                        "$outgoingText $callText $ongoingText"
+                    }
+                    "incoming" -> {
+                        val incomingText = getTranslatedText("incomingCallText", "Incoming")
+                        val callText = if (callData.isVideoCall) {
+                            getTranslatedText("videoCallText", "video")
+                        } else {
+                            getTranslatedText("voiceCallText", "voice")
+                        }
+                        val ongoingText = getTranslatedText("ongoingCallText", "call")
+                        "$incomingText $callText $ongoingText"
+                    }
+                    else -> {
+                        val callText = if (callData.isVideoCall) {
+                            getTranslatedText("videoCallText", "Video")
+                        } else {
+                            getTranslatedText("voiceCallText", "Voice")
+                        }
+                        val ongoingText = getTranslatedText("ongoingCallText", "call")
+                        "$callText $ongoingText"
+                    }
                 }
+                val tapToReturnText = getTranslatedText("tapToReturnText", "Tap to return to call")
                 
                 // Use CallStyle for Android 12+ foreground service
                 val notification = Notification.Builder(context, ONGOING_CALL_NOTIFICATION_CHANNEL_ID)
                     .setContentTitle(callData.callerName)
-                    .setContentText("Tap to return to call")
+                    .setContentText(tapToReturnText)
                     .setSubText("$callTypeText • $durationText")
                     .setSmallIcon(android.R.drawable.ic_menu_call)
                     .setContentIntent(appLaunchPendingIntent)
@@ -1329,15 +1593,45 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
                 )
                 
                 val durationText = formatCallDuration(durationSeconds)
+                
+                // Get translated text for different call types
                 val callTypeText = when (callType) {
-                    "outgoing" -> "Outgoing ${if (callData.isVideoCall) "video" else "voice"} call"
-                    "incoming" -> "Incoming ${if (callData.isVideoCall) "video" else "voice"} call"
-                    else -> "${if (callData.isVideoCall) "Video" else "Voice"} call"
+                    "outgoing" -> {
+                        val outgoingText = getTranslatedText("outgoingCallText", "Outgoing")
+                        val callText = if (callData.isVideoCall) {
+                            getTranslatedText("videoCallText", "video")
+                        } else {
+                            getTranslatedText("voiceCallText", "voice")
+                        }
+                        val ongoingText = getTranslatedText("ongoingCallText", "call")
+                        "$outgoingText $callText $ongoingText"
+                    }
+                    "incoming" -> {
+                        val incomingText = getTranslatedText("incomingCallText", "Incoming")
+                        val callText = if (callData.isVideoCall) {
+                            getTranslatedText("videoCallText", "video")
+                        } else {
+                            getTranslatedText("voiceCallText", "voice")
+                        }
+                        val ongoingText = getTranslatedText("ongoingCallText", "call")
+                        "$incomingText $callText $ongoingText"
+                    }
+                    else -> {
+                        val callText = if (callData.isVideoCall) {
+                            getTranslatedText("videoCallText", "Video")
+                        } else {
+                            getTranslatedText("voiceCallText", "Voice")
+                        }
+                        val ongoingText = getTranslatedText("ongoingCallText", "call")
+                        "$callText $ongoingText"
+                    }
                 }
+                val tapToReturnText = getTranslatedText("tapToReturnText", "Tap to return to call")
+                val hangupText = getTranslatedText("hangupButtonText", "Hang Up")
                 
                 val notification = NotificationCompat.Builder(context, ONGOING_CALL_NOTIFICATION_CHANNEL_ID)
                     .setContentTitle(callData.callerName)
-                    .setContentText("Tap to return to call")
+                    .setContentText(tapToReturnText)
                     .setSubText("$callTypeText • $durationText")
                     .setSmallIcon(android.R.drawable.ic_menu_call)
                     .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -1348,7 +1642,7 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
                     .setContentIntent(appLaunchPendingIntent)
                     .addAction(
                         android.R.drawable.ic_menu_close_clear_cancel,
-                        "Hang Up",
+                        hangupText,
                         hangupPendingIntent
                     )
                     .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -1361,7 +1655,7 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
                     .setDefaults(0) // No sound, vibration for ongoing calls
                     .setStyle(
                         NotificationCompat.BigTextStyle()
-                            .bigText("Tap to return to call")
+                            .bigText(tapToReturnText)
                             .setBigContentTitle(callData.callerName)
                             .setSummaryText("$callTypeText • $durationText")
                     )
@@ -1622,8 +1916,8 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         
         try {
             // Store UI configuration for future use
-            // This can be used to customize notification appearance, text, etc.
-            Log.d(TAG, "UI configuration set: $arguments")
+            setUIConfiguration(arguments)
+            Log.d(TAG, "UI configuration set successfully with translations")
             result.success(true)
         } catch (e: Exception) {
             Log.e(TAG, "Error setting UI configuration: ${e.message}")
@@ -1651,6 +1945,91 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         } catch (e: Exception) {
             Log.e(TAG, "Error getting debug info: ${e.message}")
             result.error("DEBUG_INFO_ERROR", "Failed to get debug info: ${e.message}", null)
+        }
+    }
+
+    /**
+     * Show an incoming call with custom configuration
+     */
+    private fun handleShowIncomingCallWithConfig(call: MethodCall, result: Result) {
+        val arguments = call.arguments as? Map<String, Any>
+        if (arguments == null) {
+            result.error("INVALID_ARGUMENTS", "Configuration and call data required", null)
+            return
+        }
+        
+        val callData = arguments["callData"] as? Map<String, Any>
+        val config = arguments["config"] as? Map<String, Any>
+        
+        if (callData == null) {
+            result.error("INVALID_CALL_DATA", "Valid call data required", null)
+            return
+        }
+        
+        val parsedCallData = parseCallData(callData)
+        if (parsedCallData == null) {
+            result.error("INVALID_CALL_DATA", "Valid call data required", null)
+            return
+        }
+        
+        try {
+            // Store configuration for this call if provided
+            if (config != null) {
+                Log.d(TAG, "Using custom configuration for call with translations")
+                // Store the configuration temporarily for this call
+                setUIConfiguration(config)
+            }
+            
+            // Show the call with the provided configuration
+            showIncomingCallNotification(parsedCallData, result)
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error showing call with config: ${e.message}")
+            result.error("CALL_CONFIG_ERROR", "Failed to show call with configuration: ${e.message}", null)
+        }
+    }
+
+    /**
+     * Force show hangup notification for testing purposes
+     */
+    private fun handleForceShowHangupNotification(call: MethodCall, result: Result) {
+        val arguments = call.arguments as? Map<String, Any>
+        if (arguments == null) {
+            result.error("INVALID_ARGUMENTS", "Configuration and call data required", null)
+            return
+        }
+        
+        val callData = arguments["callData"] as? Map<String, Any>
+        val config = arguments["config"] as? Map<String, Any>
+        
+        if (callData == null) {
+            result.error("INVALID_CALL_DATA", "Valid call data required", null)
+            return
+        }
+        
+        val parsedCallData = parseCallData(callData)
+        if (parsedCallData == null) {
+            result.error("INVALID_CALL_DATA", "Valid call data required", null)
+            return
+        }
+        
+        try {
+            Log.d(TAG, "Force showing hangup notification for testing: ${parsedCallData.callerName}")
+            
+            if (config != null) {
+                Log.d(TAG, "Using custom configuration for hangup notification: $config")
+            }
+            
+            // Start the foreground service with hangup notification
+            // This creates a non-dismissible notification with duration timer
+            CallForegroundService.startService(context, parsedCallData)
+            
+            Log.d(TAG, "Hangup notification forced to show successfully")
+            result.success(true)
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error forcing hangup notification: ${e.message}")
+            result.error("FORCE_HANGUP_ERROR", "Failed to force show hangup notification: ${e.message}", null)
         }
     }
 }
