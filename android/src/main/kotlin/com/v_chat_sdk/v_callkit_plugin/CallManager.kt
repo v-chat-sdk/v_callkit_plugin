@@ -69,7 +69,7 @@ class CallManager(private val context: Context) {
     }
     
     /**
-     * Handle call answer - CRITICAL: This ensures hangup notification shows on ALL Android versions
+     * Handle call answer - No automatic notification, controlled from Flutter
      */
     fun handleCallAnswered(callData: CallData, config: CallUIConfig? = null) {
         Log.d(TAG, "Call answered for: ${callData.callerName}")
@@ -84,11 +84,8 @@ class CallManager(private val context: Context) {
         // Update connection manager
         CallConnectionManager.answerCall(callData.id)
         
-        // CRITICAL: Always show hangup notification when call is answered
-        // This ensures it works on ALL Android API versions (21+)
-        showHangupNotificationForActiveCall(callData, currentUIConfig)
-        
-        Log.d(TAG, "Hangup notification triggered for answered call: ${callData.callerName}")
+        // NOTE: No automatic hangup notification - controlled from Flutter side
+        Log.d(TAG, "Call answered - notification control delegated to Flutter: ${callData.callerName}")
     }
     
     /**

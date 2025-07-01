@@ -90,10 +90,9 @@ class CallActionReceiver : BroadcastReceiver() {
             // Update call connection manager
             CallConnectionManager.answerCall(callId)
             
-            // Show ongoing call notification if needed
-            showOngoingCallNotification(context, callId)
+            // NOTE: No automatic ongoing notification - controlled from Flutter side
             
-            Log.d(TAG, "Call answered successfully: $callId")
+            Log.d(TAG, "Call answered successfully - notification control delegated to Flutter: $callId")
         } else {
             Log.e(TAG, "Cannot answer call: callId is null")
         }

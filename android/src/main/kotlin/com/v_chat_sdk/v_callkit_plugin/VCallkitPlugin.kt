@@ -742,21 +742,8 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         notificationManager.cancel(CALL_NOTIFICATION_ID)
         
         if (CallConnectionManager.answerCall(callId)) {
-            // Show ongoing call notification if available
-            val callData = CallConnectionManager.getCallData(callId ?: "")
-            if (callData != null) {
-                Log.d(TAG, "Found call data, showing ongoing notification for: ${callData.callerName}")
-                forceShowOngoingNotification(callData)
-            } else {
-                Log.e(TAG, "No call data found for answered call: $callId")
-                
-                // Try to get from incoming call data as fallback
-                val incomingData = CallConnectionManager.getIncomingCallData()
-                if (incomingData != null) {
-                    Log.d(TAG, "Using incoming call data for ongoing notification")
-                    forceShowOngoingNotification(incomingData)
-                }
-            }
+            // NOTE: No automatic ongoing notification - controlled from Flutter side
+            Log.d(TAG, "Call answered successfully - notification control delegated to Flutter: $callId")
             result.success(true)
         } else {
             result.error("NO_ACTIVE_CALL", "No active call to answer", null)
