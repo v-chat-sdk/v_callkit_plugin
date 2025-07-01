@@ -35,7 +35,6 @@ class VCallkitPlugin {
   late final Stream<CallHoldEvent> _onCallHold;
   late final Stream<CallMuteEvent> _onCallMute;
   late final Stream<CallStateChangedEvent> _onCallStateChanged;
-  late final Stream<CallDtmfEvent> _onDtmfTone;
 
   /// Stream of all call events
   late final Stream<CallEvent> _onCallEvent;
@@ -94,12 +93,6 @@ class VCallkitPlugin {
   Stream<CallStateChangedEvent> get onCallStateChanged {
     _ensureInitialized();
     return _onCallStateChanged;
-  }
-
-  /// Stream of DTMF tone events
-  Stream<CallDtmfEvent> get onDtmfTone {
-    _ensureInitialized();
-    return _onDtmfTone;
   }
 
   /// Stream of all call events
@@ -219,117 +212,7 @@ class VCallkitPlugin {
     return VCallkitPluginPlatform.instance.clearCallActionLaunchData();
   }
 
-  // Public API - Notifications
-
-  /// Force show ongoing call notification
-  Future<bool> forceShowOngoingNotification(CallData callData) {
-    return VCallkitPluginPlatform.instance.forceShowOngoingNotification(
-      callData.toMap(),
-    );
-  }
-
-  /// Show persistent hangup notification
-  ///
-  /// This method shows a persistent notification that can only be dismissed
-  /// via the hangup button. It appears after answering a call and provides
-  /// a non-dismissible way to hang up the call from the notification area.
-  ///
-  /// The notification includes:
-  /// - Call duration timer
-  /// - Caller information
-  /// - Single "Hangup" action button
-  /// - Non-swipeable, persistent until hangup
-  ///
-  /// [callData] - The call information to display
-  ///
-  /// Returns true if the hangup notification was successfully shown
-  Future<bool> showHangupNotification(CallData callData) {
-    return VCallkitPluginPlatform.instance.showHangupNotification(
-      callData.toMap(),
-    );
-  }
-
-  /// Hide hangup notification
-  ///
-  /// This method removes the persistent hangup notification. Should be called
-  /// when the call ends or when the hangup button is pressed.
-  ///
-  /// Returns true if the hangup notification was successfully hidden
-  Future<bool> hideHangupNotification() {
-    return VCallkitPluginPlatform.instance.hideHangupNotification();
-  }
-
-  /// Update hangup notification with new call data
-  ///
-  /// This method updates the existing hangup notification with new information
-  /// while keeping the duration timer running. Useful for updating caller info
-  /// or other call details during the call.
-  ///
-  /// [callData] - The updated call information to display
-  ///
-  /// Returns true if the hangup notification was successfully updated
-  Future<bool> updateHangupNotification(CallData callData) {
-    return VCallkitPluginPlatform.instance.updateHangupNotification(
-      callData.toMap(),
-    );
-  }
-
-  /// Launch hangup notification with the same foreground service pattern as accepting calls from notifications
-  ///
-  /// This method demonstrates that hangup notifications use the exact same foreground service
-  /// robustness as when calls are accepted from notification actions. It provides:
-  ///
-  /// - Same foreground service pattern as CallForegroundService
-  /// - Non-dismissible notification with proper Android flags
-  /// - Live duration timer updates
-  /// - App backgrounding and termination survival
-  /// - Same service lifecycle management as call acceptance
-  ///
-  /// This is the recommended method to use when you want to ensure your hangup
-  /// notification has the same reliability as the ongoing call notifications that
-  /// appear when accepting calls from notification actions.
-  ///
-  /// [callData] - The call information to display
-  ///
-  /// Returns true if the hangup notification was successfully launched with foreground service
-  Future<bool> launchHangupNotificationWithForegroundService(
-    CallData callData,
-  ) {
-    return VCallkitPluginPlatform.instance
-        .launchHangupNotificationWithForegroundService(callData.toMap());
-  }
-
-  // Public API - Advanced Configuration
-
-  /// Show an incoming call with custom configuration
-  Future<bool> showIncomingCallWithConfig(Map<String, dynamic> params) async {
-    final callDataMap = _extractCallDataFromParams(params);
-    final config = _extractConfigFromParams(params);
-
-    final mergedData = _mergeCallDataWithConfig(callDataMap, config);
-    return VCallkitPluginPlatform.instance.showIncomingCall(mergedData);
-  }
-
-  /// Set global UI configuration
-  Future<bool> setUIConfiguration(Map<String, dynamic> config) async {
-    return VCallkitPluginPlatform.instance.setUIConfiguration(config);
-  }
-
-  /// Force show hangup notification (alias for showHangupNotification)
-  Future<bool> forceShowHangupNotification(Map<String, dynamic> params) async {
-    final callDataMap = _extractCallDataFromParams(params);
-    final config = _extractConfigFromParams(params);
-
-    final mergedData = _mergeCallDataWithConfig(callDataMap, config);
-    return VCallkitPluginPlatform.instance.showHangupNotification(mergedData);
-  }
-
-  /// Get call manager debug information
-  Future<Map<String, dynamic>> getCallManagerDebugInfo() async {
-    return VCallkitPluginPlatform.instance.getCallManagerDebugInfo();
-  }
-
-  // Public API - Foreground Service Control
+  // Public API - Foreground Service Control (Essential for Android 14+)
 
   /// Start persistent notification for outgoing calls
   ///
@@ -352,21 +235,6 @@ class VCallkitPlugin {
     );
   }
 
-  /// Start persistent notification for incoming calls
-  ///
-  /// This method provides explicit control over incoming call notifications
-  /// using the foreground service pattern. Use this when you want to manually
-  /// control when the persistent notification appears for incoming calls.
-  ///
-  /// [callData] - The call information to display
-  ///
-  /// Returns true if the incoming call notification was successfully started
-  Future<bool> startIncomingCallNotification(CallData callData) {
-    return VCallkitPluginPlatform.instance.startIncomingCallNotification(
-      callData.toMap(),
-    );
-  }
-
   /// Stop the call foreground service
   ///
   /// This method stops any active foreground service and removes the persistent notification.
@@ -375,21 +243,6 @@ class VCallkitPlugin {
   /// Returns true if the foreground service was successfully stopped
   Future<bool> stopCallForegroundService() {
     return VCallkitPluginPlatform.instance.stopCallForegroundService();
-  }
-
-  /// Update the call foreground service with new call data
-  ///
-  /// This method updates the persistent notification with new information
-  /// while keeping the service running. Useful for updating caller info
-  /// or other call details during the call.
-  ///
-  /// [callData] - The updated call information to display
-  ///
-  /// Returns true if the foreground service was successfully updated
-  Future<bool> updateCallForegroundService(CallData callData) {
-    return VCallkitPluginPlatform.instance.updateCallForegroundService(
-      callData.toMap(),
-    );
   }
 
   // Public API - Convenience Methods
@@ -475,10 +328,6 @@ class VCallkitPlugin {
       (data) => CallStateChangedEvent.fromMap(data),
     );
 
-    _onDtmfTone = _methodChannelPlugin.onDtmfTone.map(
-      (data) => CallDtmfEvent.fromMap(data),
-    );
-
     // Combined event stream
     _onCallEvent = StreamGroup.merge([
       _onCallAnswered,
@@ -487,7 +336,6 @@ class VCallkitPlugin {
       _onCallHold,
       _onCallMute,
       _onCallStateChanged,
-      _onDtmfTone,
     ]);
   }
 
@@ -498,7 +346,7 @@ class VCallkitPlugin {
     }
   }
 
-  /// Helper method to reduce duplication in convenience methods
+  /// Helper method to create call data and show incoming call
   Future<bool> _showIncomingCallWithType({
     String? callId,
     required String callerName,
@@ -515,48 +363,33 @@ class VCallkitPlugin {
       isVideoCall: isVideoCall,
       extra: extra,
     );
+
     return showIncomingCall(callData);
   }
 
-  /// Extract call data from configuration parameters
-  Map<String, dynamic> _extractCallDataFromParams(Map<String, dynamic> params) {
-    return params['callData'] as Map<String, dynamic>? ?? {};
-  }
-
-  /// Extract config from configuration parameters
-  Map<String, dynamic> _extractConfigFromParams(Map<String, dynamic> params) {
-    return params['config'] as Map<String, dynamic>? ?? {};
-  }
-
-  /// Merge call data with configuration
-  Map<String, dynamic> _mergeCallDataWithConfig(
-    Map<String, dynamic> callData,
-    Map<String, dynamic> config,
-  ) {
-    return Map<String, dynamic>.from(callData)..addAll(config);
-  }
-
-  /// Filter stream by call ID if provided
+  /// Filter stream by call ID
   Stream<T> _filterStreamByCallId<T extends CallEvent>(
     Stream<T> stream,
     String? callId,
   ) {
-    return callId != null
-        ? stream.where((event) => event.callId == callId)
-        : stream;
+    if (callId == null) return stream;
+    return stream.where((event) => event.callId == callId);
   }
 }
 
-/// Helper class to merge multiple streams
-class StreamGroup<T> {
-  static Stream<T> merge<T>(Iterable<Stream<T>> streams) {
+/// Helper class for merging streams
+class StreamGroup {
+  static Stream<T> merge<T>(List<Stream<T>> streams) {
     final controller = StreamController<T>.broadcast();
+
     final subscriptions = <StreamSubscription>[];
 
     for (final stream in streams) {
-      subscriptions.add(
-        stream.listen(controller.add, onError: controller.addError),
+      final subscription = stream.listen(
+        controller.add,
+        onError: controller.addError,
       );
+      subscriptions.add(subscription);
     }
 
     controller.onCancel = () {

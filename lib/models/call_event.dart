@@ -20,8 +20,6 @@ enum CallAction {
   unhold,
   mute,
   unmute,
-  dtmf,
-  dtmfStop,
   stateChanged,
 }
 
@@ -68,9 +66,6 @@ abstract class CallEvent {
         return CallMuteEvent.fromMap(map);
       case CallAction.stateChanged:
         return CallStateChangedEvent.fromMap(map);
-      case CallAction.dtmf:
-      case CallAction.dtmfStop:
-        return CallDtmfEvent.fromMap(map);
     }
   }
 
@@ -93,10 +88,6 @@ abstract class CallEvent {
         return CallAction.mute;
       case 'unmute':
         return CallAction.unmute;
-      case 'dtmf':
-        return CallAction.dtmf;
-      case 'dtmf_stop':
-        return CallAction.dtmfStop;
       case 'state_changed':
         return CallAction.stateChanged;
       default:
@@ -263,30 +254,6 @@ class CallStateChangedEvent extends CallEvent {
       default:
         return CallState.unknown;
     }
-  }
-}
-
-/// Event fired for DTMF tones
-class CallDtmfEvent extends CallEvent {
-  /// The DTMF digit pressed
-  final String? digit;
-
-  const CallDtmfEvent({
-    required super.callId,
-    required super.timestamp,
-    super.data = const {},
-    this.digit,
-  }) : super(action: CallAction.dtmf);
-
-  factory CallDtmfEvent.fromMap(Map<String, dynamic> map) {
-    return CallDtmfEvent(
-      callId: map['callId'] as String? ?? '',
-      timestamp: DateTime.fromMillisecondsSinceEpoch(
-        map['timestamp'] as int? ?? DateTime.now().millisecondsSinceEpoch,
-      ),
-      data: Map<String, dynamic>.from(map),
-      digit: map['digit'] as String?,
-    );
   }
 }
 

@@ -67,30 +67,11 @@ class MockVCallkitPluginPlatform
   Future<bool> clearCallActionLaunchData() => Future.value(true);
 
   @override
-  Future<bool> forceShowOngoingNotification(Map<String, dynamic> callData) =>
+  Future<bool> startOutgoingCallNotification(Map<String, dynamic> callData) =>
       Future.value(true);
 
   @override
-  Future<bool> showHangupNotification(Map<String, dynamic> callData) =>
-      Future.value(true);
-
-  @override
-  Future<bool> hideHangupNotification() => Future.value(true);
-
-  @override
-  Future<bool> updateHangupNotification(Map<String, dynamic> callData) =>
-      Future.value(true);
-
-  @override
-  Future<bool> setUIConfiguration(Map<String, dynamic> config) =>
-      Future.value(true);
-
-  @override
-  Future<Map<String, dynamic>> getCallManagerDebugInfo() => Future.value({
-    'androidVersion': 33,
-    'isCallActive': false,
-    'hasHangupNotificationService': true,
-  });
+  Future<bool> stopCallForegroundService() => Future.value(true);
 }
 
 void main() {
@@ -118,6 +99,21 @@ void main() {
       expect(await mockPlatform.holdCall(true, 'test-call'), true);
       expect(await mockPlatform.isCallActive(), false);
       expect(await mockPlatform.getActiveCallData(), null);
+
+      // Test foreground service methods
+      expect(await mockPlatform.startOutgoingCallNotification({'test': 'data'}),
+          true);
+      expect(await mockPlatform.stopCallForegroundService(), true);
+
+      // Test utility methods
+      expect(await mockPlatform.setCustomRingtone('test://ringtone'), true);
+      expect(await mockPlatform.getSystemRingtones(), []);
+      expect(await mockPlatform.checkBatteryOptimization(), true);
+      expect(await mockPlatform.requestBatteryOptimization(), true);
+      expect(await mockPlatform.getDeviceManufacturer(), 'test-manufacturer');
+      expect(await mockPlatform.getLastCallActionLaunch(), null);
+      expect(await mockPlatform.hasCallActionLaunchData(), false);
+      expect(await mockPlatform.clearCallActionLaunchData(), true);
     });
   });
 
@@ -333,19 +329,6 @@ void main() {
       expect(event.state, CallState.active);
     });
 
-    test('CallDtmfEvent creation and parsing', () {
-      final timestamp = DateTime.now();
-      final event = CallDtmfEvent(
-        callId: 'dtmf-test',
-        timestamp: timestamp,
-        digit: '5',
-      );
-
-      expect(event.callId, 'dtmf-test');
-      expect(event.action, CallAction.dtmf);
-      expect(event.digit, '5');
-    });
-
     test('CallEvent.fromMap creates correct event type', () {
       // Test CallAnsweredEvent from map
       final answeredMap = {
@@ -410,7 +393,6 @@ void main() {
       expect(CallAction.values, contains(CallAction.hold));
       expect(CallAction.values, contains(CallAction.mute));
       expect(CallAction.values, contains(CallAction.stateChanged));
-      expect(CallAction.values, contains(CallAction.dtmf));
     });
 
     test('CallState enum values', () {

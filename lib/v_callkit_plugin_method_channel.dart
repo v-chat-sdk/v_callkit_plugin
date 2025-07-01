@@ -23,8 +23,6 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
       StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<Map<String, dynamic>> _callStateChangedController =
       StreamController<Map<String, dynamic>>.broadcast();
-  final StreamController<Map<String, dynamic>> _dtmfToneController =
-      StreamController<Map<String, dynamic>>.broadcast();
 
   MethodChannelVCallkitPlugin() {
     // Set up method call handler for callbacks from native side
@@ -56,9 +54,6 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
       case 'onCallStateChanged':
         _callStateChangedController.add(arguments);
         break;
-      case 'onDtmfTone':
-        _dtmfToneController.add(arguments);
-        break;
       default:
         if (kDebugMode) {
           print('Unknown method call: ${call.method}');
@@ -88,9 +83,6 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
   /// Stream of call state change events
   Stream<Map<String, dynamic>> get onCallStateChanged =>
       _callStateChangedController.stream;
-
-  /// Stream of DTMF tone events
-  Stream<Map<String, dynamic>> get onDtmfTone => _dtmfToneController.stream;
 
   @override
   Future<String?> getPlatformVersion() async {
@@ -235,6 +227,41 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
     return result != null ? _safeMapConvert(result) : null;
   }
 
+  @override
+  Future<bool> hasCallActionLaunchData() async {
+    final result = await methodChannel.invokeMethod<bool>(
+      'hasCallActionLaunchData',
+    );
+    return result ?? false;
+  }
+
+  @override
+  Future<bool> clearCallActionLaunchData() async {
+    final result = await methodChannel.invokeMethod<bool>(
+      'clearCallActionLaunchData',
+    );
+    return result ?? false;
+  }
+
+  @override
+  Future<bool> startOutgoingCallNotification(
+    Map<String, dynamic> callData,
+  ) async {
+    final result = await methodChannel.invokeMethod<bool>(
+      'startOutgoingCallNotification',
+      callData,
+    );
+    return result ?? false;
+  }
+
+  @override
+  Future<bool> stopCallForegroundService() async {
+    final result = await methodChannel.invokeMethod<bool>(
+      'stopCallForegroundService',
+    );
+    return result ?? false;
+  }
+
   /// Safely converts a map from platform channel to Map with String keys and dynamic values
   /// This handles nested maps and ensures proper type conversion
   static Map<String, dynamic> _safeMapConvert(dynamic value) {
@@ -271,128 +298,6 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
     return value;
   }
 
-  @override
-  Future<bool> hasCallActionLaunchData() async {
-    final result = await methodChannel.invokeMethod<bool>(
-      'hasCallActionLaunchData',
-    );
-    return result ?? false;
-  }
-
-  @override
-  Future<bool> clearCallActionLaunchData() async {
-    final result = await methodChannel.invokeMethod<bool>(
-      'clearCallActionLaunchData',
-    );
-    return result ?? false;
-  }
-
-  @override
-  Future<bool> forceShowOngoingNotification(
-    Map<String, dynamic> callData,
-  ) async {
-    final result = await methodChannel.invokeMethod<bool>(
-      'forceShowOngoingNotification',
-      callData,
-    );
-    return result ?? false;
-  }
-
-  @override
-  Future<bool> showHangupNotification(Map<String, dynamic> callData) async {
-    final result = await methodChannel.invokeMethod<bool>(
-      'showHangupNotification',
-      callData,
-    );
-    return result ?? false;
-  }
-
-  @override
-  Future<bool> hideHangupNotification() async {
-    final result = await methodChannel.invokeMethod<bool>(
-      'hideHangupNotification',
-    );
-    return result ?? false;
-  }
-
-  @override
-  Future<bool> updateHangupNotification(Map<String, dynamic> callData) async {
-    final result = await methodChannel.invokeMethod<bool>(
-      'updateHangupNotification',
-      callData,
-    );
-    return result ?? false;
-  }
-
-  @override
-  Future<bool> launchHangupNotificationWithForegroundService(
-    Map<String, dynamic> callData,
-  ) async {
-    final result = await methodChannel.invokeMethod<bool>(
-      'launchHangupNotificationWithForegroundService',
-      callData,
-    );
-    return result ?? false;
-  }
-
-  @override
-  Future<bool> setUIConfiguration(Map<String, dynamic> config) async {
-    final result = await methodChannel.invokeMethod<bool>(
-      'setUIConfiguration',
-      config,
-    );
-    return result ?? false;
-  }
-
-  @override
-  Future<Map<String, dynamic>> getCallManagerDebugInfo() async {
-    final result = await methodChannel.invokeMethod<Map<Object?, Object?>>(
-      'getCallManagerDebugInfo',
-    );
-    return result != null ? _safeMapConvert(result) : {};
-  }
-
-  @override
-  Future<bool> startOutgoingCallNotification(
-    Map<String, dynamic> callData,
-  ) async {
-    final result = await methodChannel.invokeMethod<bool>(
-      'startOutgoingCallNotification',
-      callData,
-    );
-    return result ?? false;
-  }
-
-  @override
-  Future<bool> startIncomingCallNotification(
-    Map<String, dynamic> callData,
-  ) async {
-    final result = await methodChannel.invokeMethod<bool>(
-      'startIncomingCallNotification',
-      callData,
-    );
-    return result ?? false;
-  }
-
-  @override
-  Future<bool> stopCallForegroundService() async {
-    final result = await methodChannel.invokeMethod<bool>(
-      'stopCallForegroundService',
-    );
-    return result ?? false;
-  }
-
-  @override
-  Future<bool> updateCallForegroundService(
-    Map<String, dynamic> callData,
-  ) async {
-    final result = await methodChannel.invokeMethod<bool>(
-      'updateCallForegroundService',
-      callData,
-    );
-    return result ?? false;
-  }
-
   /// Dispose method to clean up resources
   void dispose() {
     _callAnsweredController.close();
@@ -401,6 +306,5 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
     _callHoldController.close();
     _callMuteController.close();
     _callStateChangedController.close();
-    _dtmfToneController.close();
   }
 }

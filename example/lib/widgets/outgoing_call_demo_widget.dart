@@ -116,56 +116,6 @@ class _OutgoingCallDemoWidgetState extends State<OutgoingCallDemoWidget> {
     }
   }
 
-  Future<void> _updateOutgoingCall() async {
-    if (!_isOutgoingCallActive) return;
-
-    setState(() {
-      _isLoading = true;
-      _statusMessage = 'Updating outgoing call notification...';
-    });
-
-    try {
-      // Create updated call data
-      final updatedCallData = CallData(
-        id: _outgoingCallData.id,
-        callerName: 'John Smith (Updated)',
-        callerNumber: _outgoingCallData.callerNumber,
-        callerAvatar: _outgoingCallData.callerAvatar,
-        isVideoCall: true, // Changed to video call
-        extra: {
-          ..._outgoingCallData.extra,
-          'updated': DateTime.now().toIso8601String(),
-        },
-      );
-
-      final success = await _plugin.updateCallForegroundService(
-        updatedCallData,
-      );
-
-      if (success) {
-        setState(() {
-          _statusMessage = 'Outgoing call notification updated to video call';
-        });
-
-        _showSnackBar('Notification updated to video call', Colors.blue);
-      } else {
-        setState(() {
-          _statusMessage = 'Failed to update outgoing call notification';
-        });
-        _showSnackBar('Failed to update notification', Colors.red);
-      }
-    } catch (e) {
-      setState(() {
-        _statusMessage = 'Error: $e';
-      });
-      _showSnackBar('Error: $e', Colors.red);
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
   void _showSnackBar(String message, Color color) {
     if (!mounted) return;
 
@@ -304,17 +254,6 @@ class _OutgoingCallDemoWidgetState extends State<OutgoingCallDemoWidget> {
                 ElevatedButton.icon(
                   onPressed: _isLoading || !_isOutgoingCallActive
                       ? null
-                      : _updateOutgoingCall,
-                  icon: const Icon(Icons.update, size: 16),
-                  label: const Text('Update to Video'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue[600],
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: _isLoading || !_isOutgoingCallActive
-                      ? null
                       : _stopOutgoingCall,
                   icon: const Icon(Icons.call_end, size: 16),
                   label: const Text('End Call'),
@@ -352,8 +291,7 @@ class _OutgoingCallDemoWidgetState extends State<OutgoingCallDemoWidget> {
                     '1. Tap "Start Outgoing Call" to create a persistent notification\n'
                     '2. Check your notification panel - it should be non-dismissible\n'
                     '3. Try backgrounding the app - notification persists\n'
-                    '4. Tap "Update to Video" to change notification text\n'
-                    '5. Tap "End Call" to remove the notification',
+                    '4. Tap "End Call" to remove the notification',
                     style: TextStyle(fontSize: 11, color: Colors.blue[700]),
                   ),
                 ],

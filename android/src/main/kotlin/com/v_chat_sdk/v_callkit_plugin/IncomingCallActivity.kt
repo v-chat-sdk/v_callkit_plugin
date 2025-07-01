@@ -30,7 +30,6 @@ class IncomingCallActivity : Activity() {
     
     private lateinit var wakeLock: PowerManager.WakeLock
     private var callData: CallData? = null
-    private var uiConfig: CallUIConfig? = null
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,10 +37,6 @@ class IncomingCallActivity : Activity() {
         // Extract call data
         val bundle = intent.getBundleExtra(CallConstants.EXTRA_CALL_DATA)
         callData = bundle?.let { CallData.fromBundle(it) }
-        
-        // Extract UI configuration
-        val configBundle = intent.getBundleExtra("ui_config")
-        uiConfig = configBundle?.let { CallUIConfig.fromBundle(it) } ?: CallUIConfig()
         
         if (callData == null) {
             Log.e(TAG, "No call data provided")
@@ -104,9 +99,7 @@ class IncomingCallActivity : Activity() {
         // Create a simple vertical layout for the call screen
         val layout = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
-            setBackgroundColor(android.graphics.Color.parseColor(
-                uiConfig?.getSafeColor(uiConfig?.backgroundColor, CallConstants.COLOR_BACKGROUND) ?: CallConstants.COLOR_BACKGROUND
-            ))
+            setBackgroundColor(android.graphics.Color.parseColor(CallConstants.COLOR_BACKGROUND))
             gravity = android.view.Gravity.CENTER
             setPadding(40, 100, 40, 100)
         }
@@ -130,33 +123,29 @@ class IncomingCallActivity : Activity() {
         
         // Incoming call text
         val incomingText = TextView(this).apply {
-            text = if (uiConfig?.showCallType == true) {
-                uiConfig?.getIncomingCallText(callData?.isVideoCall == true) ?: uiConfig?.incomingCallLabel ?: "Incoming Call"
-            } else {
-                uiConfig?.incomingCallLabel ?: "Incoming Call"
-            }
+            text = if (callData?.isVideoCall == true) "Incoming Video Call" else "Incoming Voice Call"
             textSize = 16f
-            setTextColor(android.graphics.Color.parseColor(uiConfig?.getSafeColor(uiConfig?.secondaryTextColor, CallConstants.COLOR_TEXT_SECONDARY) ?: CallConstants.COLOR_TEXT_SECONDARY))
+            setTextColor(android.graphics.Color.parseColor(CallConstants.COLOR_TEXT_SECONDARY))
             gravity = android.view.Gravity.CENTER
         }
         layout.addView(incomingText)
         
         // Caller name
         val nameText = TextView(this).apply {
-            text = callData?.callerName ?: uiConfig?.unknownCallerText ?: "Unknown"
+            text = callData?.callerName ?: "Unknown"
             textSize = 32f
-            setTextColor(android.graphics.Color.parseColor(uiConfig?.getSafeColor(uiConfig?.textColor, CallConstants.COLOR_TEXT_PRIMARY) ?: CallConstants.COLOR_TEXT_PRIMARY))
+            setTextColor(android.graphics.Color.parseColor(CallConstants.COLOR_TEXT_PRIMARY))
             gravity = android.view.Gravity.CENTER
             setPadding(0, 20, 0, 10)
         }
         layout.addView(nameText)
         
-        // Caller number (show based on config)
-        if (uiConfig?.showCallerNumber == true && !callData?.callerNumber.isNullOrEmpty()) {
+        // Caller number
+        if (!callData?.callerNumber.isNullOrEmpty()) {
             val numberText = TextView(this).apply {
                 text = callData?.callerNumber ?: ""
                 textSize = 18f
-                setTextColor(android.graphics.Color.parseColor(uiConfig?.getSafeColor(uiConfig?.secondaryTextColor, CallConstants.COLOR_TEXT_SECONDARY) ?: CallConstants.COLOR_TEXT_SECONDARY))
+                setTextColor(android.graphics.Color.parseColor(CallConstants.COLOR_TEXT_SECONDARY))
                 gravity = android.view.Gravity.CENTER
                 setPadding(0, 0, 0, 80)
             }
@@ -175,16 +164,16 @@ class IncomingCallActivity : Activity() {
         
         // Decline button (circular red)
         val declineButton = createCircularButton(
-            android.graphics.Color.parseColor(uiConfig?.getSafeColor(null, CallConstants.COLOR_DECLINE_BUTTON) ?: CallConstants.COLOR_DECLINE_BUTTON),
+            android.graphics.Color.parseColor(CallConstants.COLOR_DECLINE_BUTTON),
             android.R.drawable.ic_menu_close_clear_cancel,
-            uiConfig?.declineButtonContentDescription ?: "Decline call"
+            "Decline call"
         ) { handleDecline() }
         
         // Answer button (circular green)
         val answerButton = createCircularButton(
-            android.graphics.Color.parseColor(uiConfig?.getSafeColor(uiConfig?.accentColor, CallConstants.COLOR_ANSWER_BUTTON) ?: CallConstants.COLOR_ANSWER_BUTTON),
+            android.graphics.Color.parseColor(CallConstants.COLOR_ANSWER_BUTTON),
             android.R.drawable.ic_menu_call,
-            uiConfig?.answerButtonContentDescription ?: "Answer call"
+            "Answer call"
         ) { handleAnswer() }
         
         // Add spacing between buttons
@@ -201,7 +190,7 @@ class IncomingCallActivity : Activity() {
         return layout
     }
     
-    private fun createCircularButton(color: Int, iconRes: Int, contentDescription: String? = null, onClick: () -> Unit): View {
+    private fun createCircularButton(color: Int, iconRes: Int, contentDescription: String, onClick: () -> Unit): View {
         val button = android.widget.FrameLayout(this).apply {
             layoutParams = android.widget.LinearLayout.LayoutParams(
                 CallConstants.BUTTON_SIZE_DP * 2,
@@ -221,7 +210,7 @@ class IncomingCallActivity : Activity() {
                 paint.color = color
             }
             setOnClickListener { onClick() }
-            contentDescription?.let { this.contentDescription = it }
+            this.contentDescription = contentDescription
         }
         
         // Icon
@@ -243,7 +232,7 @@ class IncomingCallActivity : Activity() {
         return button
     }
     
-        private fun handleAnswer() {
+    private fun handleAnswer() {
         callData?.let { data ->
             Log.d(TAG, "Handling answer for call: ${data.id}")
             
@@ -254,9 +243,9 @@ class IncomingCallActivity : Activity() {
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.cancel(CallConstants.CALL_NOTIFICATION_ID)
             
-            // CRITICAL: Use CallManager to handle answered call and ensure hangup notification shows
+            // Use CallManager to handle answered call
             val callManager = CallManager.getInstance(this)
-            callManager.handleCallAnswered(data, uiConfig)
+            callManager.handleCallAnswered(data)
             
             // Launch the main Flutter app with call action data
             launchMainAppWithCallAction(CallConstants.ACTION_ANSWER, data)
@@ -264,12 +253,12 @@ class IncomingCallActivity : Activity() {
             // Send answer action
             sendCallAction(CallConstants.ACTION_ANSWER, data.id)
             
-            Log.d(TAG, "Call answered via IncomingCallActivity - CallManager handled hangup notification: ${data.id}")
+            Log.d(TAG, "Call answered via IncomingCallActivity: ${data.id}")
         }
         finish()
     }
     
-        private fun handleDecline() {
+    private fun handleDecline() {
         callData?.let { data ->
             Log.d(TAG, "Handling decline for call: ${data.id}")
             
@@ -309,13 +298,13 @@ class IncomingCallActivity : Activity() {
             val packageManager = packageManager
             val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
             
-                    if (launchIntent != null) {
-            launchIntent.apply {
-                addFlags(CallConstants.ACTIVITY_LAUNCH_FLAGS)
-                putExtra("call_action", action)
-                putExtra("call_id", callData.id)
-                putExtra("launched_from_call_screen", true)
-            }
+            if (launchIntent != null) {
+                launchIntent.apply {
+                    addFlags(CallConstants.ACTIVITY_LAUNCH_FLAGS)
+                    putExtra("call_action", action)
+                    putExtra("call_id", callData.id)
+                    putExtra("launched_from_call_screen", true)
+                }
                 
                 startActivity(launchIntent)
                 Log.d(TAG, "Main app launched with call action: $action for ${callData.callerName}")
@@ -326,8 +315,6 @@ class IncomingCallActivity : Activity() {
             Log.e(TAG, "Error launching main app with call action: ${e.message}")
         }
     }
-    
-
     
     override fun onDestroy() {
         super.onDestroy()
@@ -347,6 +334,4 @@ class IncomingCallActivity : Activity() {
     override fun onBackPressed() {
         // Prevent back button from dismissing the call
     }
-}
-
-// No longer needed - using CallData's built-in methods 
+} 

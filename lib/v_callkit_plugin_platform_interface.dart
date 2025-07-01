@@ -129,57 +129,6 @@ abstract class VCallkitPluginPlatform extends PlatformInterface {
     );
   }
 
-  /// Force show ongoing call notification
-  Future<bool> forceShowOngoingNotification(Map<String, dynamic> callData) {
-    throw UnimplementedError(
-      'forceShowOngoingNotification() has not been implemented.',
-    );
-  }
-
-  /// Show persistent hangup notification
-  Future<bool> showHangupNotification(Map<String, dynamic> callData) {
-    throw UnimplementedError(
-      'showHangupNotification() has not been implemented.',
-    );
-  }
-
-  /// Hide hangup notification
-  Future<bool> hideHangupNotification() {
-    throw UnimplementedError(
-      'hideHangupNotification() has not been implemented.',
-    );
-  }
-
-  /// Update hangup notification with new call data
-  Future<bool> updateHangupNotification(Map<String, dynamic> callData) {
-    throw UnimplementedError(
-      'updateHangupNotification() has not been implemented.',
-    );
-  }
-
-  /// Launch hangup notification with the same foreground service pattern as accepting calls from notifications
-  /// This method demonstrates that hangup notifications use the exact same foreground service
-  /// robustness as when calls are accepted from notification actions
-  Future<bool> launchHangupNotificationWithForegroundService(
-    Map<String, dynamic> callData,
-  ) {
-    throw UnimplementedError(
-      'launchHangupNotificationWithForegroundService() has not been implemented.',
-    );
-  }
-
-  /// Set global UI configuration
-  Future<bool> setUIConfiguration(Map<String, dynamic> config) {
-    throw UnimplementedError('setUIConfiguration() has not been implemented.');
-  }
-
-  /// Get call manager debug information
-  Future<Map<String, dynamic>> getCallManagerDebugInfo() {
-    throw UnimplementedError(
-      'getCallManagerDebugInfo() has not been implemented.',
-    );
-  }
-
   /// Start foreground service for outgoing calls
   /// This creates a persistent notification for outgoing calls once they are accepted
   Future<bool> startOutgoingCallNotification(Map<String, dynamic> callData) {
@@ -188,27 +137,11 @@ abstract class VCallkitPluginPlatform extends PlatformInterface {
     );
   }
 
-  /// Start foreground service for incoming calls
-  /// This provides explicit control over incoming call notifications
-  Future<bool> startIncomingCallNotification(Map<String, dynamic> callData) {
-    throw UnimplementedError(
-      'startIncomingCallNotification() has not been implemented.',
-    );
-  }
-
   /// Stop the call foreground service
   /// This stops any active foreground service and removes the persistent notification
   Future<bool> stopCallForegroundService() {
     throw UnimplementedError(
       'stopCallForegroundService() has not been implemented.',
-    );
-  }
-
-  /// Update the call foreground service with new call data
-  /// This updates the persistent notification with new information while keeping the service running
-  Future<bool> updateCallForegroundService(Map<String, dynamic> callData) {
-    throw UnimplementedError(
-      'updateCallForegroundService() has not been implemented.',
     );
   }
 }
