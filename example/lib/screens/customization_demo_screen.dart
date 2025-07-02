@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:v_callkit_plugin/v_callkit_plugin.dart';
+import 'package:v_callkit_plugin/models/call_data.dart';
+import 'package:v_callkit_plugin/models/call_configuration.dart';
 import '../models/sample_caller.dart';
 import '../widgets/error_dialog_widget.dart';
+import '../constants/app_themes.dart';
+import '../constants/app_languages.dart';
 
 class CustomizationDemoScreen extends StatefulWidget {
   const CustomizationDemoScreen({super.key});
@@ -12,104 +16,17 @@ class CustomizationDemoScreen extends StatefulWidget {
 }
 
 class _CustomizationDemoScreenState extends State<CustomizationDemoScreen> {
-  String _selectedTheme = 'Dark Green';
-  String _selectedLanguage = 'English';
+  // Configuration state
+  String _selectedTheme = AppThemes.defaultTheme;
+  String _selectedLanguage = AppLanguages.defaultLanguage;
   bool _showCallerNumber = true;
   bool _enableVibration = true;
   bool _enableRingtone = true;
   bool _showCallDuration = true;
   int _callTimeoutSeconds = 60;
 
-  // Create plugin instance
+  // Plugin instance
   final _vCallkitPlugin = VCallkitPlugin();
-
-  // Predefined themes
-  final Map<String, Map<String, dynamic>> _themes = {
-    'Dark Green': {
-      'backgroundColor': '#1C1C1E',
-      'accentColor': '#34C759',
-      'textColor': '#FFFFFF',
-      'secondaryTextColor': '#8E8E93',
-    },
-    'Light Blue': {
-      'backgroundColor': '#F2F2F7',
-      'accentColor': '#007AFF',
-      'textColor': '#000000',
-      'secondaryTextColor': '#6D6D70',
-    },
-    'Purple': {
-      'backgroundColor': '#1D1B20',
-      'accentColor': '#D0BCFF',
-      'textColor': '#E6E1E5',
-      'secondaryTextColor': '#CAC4D0',
-    },
-    'Orange': {
-      'backgroundColor': '#1C1B1F',
-      'accentColor': '#FFB4AB',
-      'textColor': '#E6E1E5',
-      'secondaryTextColor': '#CAC4D0',
-    },
-  };
-
-  // Predefined languages/translations
-  final Map<String, Map<String, String>> _languages = {
-    'English': {
-      'answerButtonText': 'Answer',
-      'declineButtonText': 'Decline',
-      'hangupButtonText': 'Hangup',
-      'incomingVoiceCallText': 'Incoming Voice Call',
-      'incomingVideoCallText': 'Incoming Video Call',
-      'callInProgressText': 'Call in Progress',
-      'tapToReturnText': 'Tap to return to call',
-      'incomingCallLabel': 'Incoming Call',
-      'unknownCallerText': 'Unknown',
-      'voiceCallText': 'Voice',
-      'videoCallText': 'Video',
-      'ongoingCallText': 'call',
-    },
-    'Spanish': {
-      'answerButtonText': 'Contestar',
-      'declineButtonText': 'Rechazar',
-      'hangupButtonText': 'Colgar',
-      'incomingVoiceCallText': 'Llamada de Voz Entrante',
-      'incomingVideoCallText': 'Videollamada Entrante',
-      'callInProgressText': 'Llamada en Progreso',
-      'tapToReturnText': 'Toca para volver a la llamada',
-      'incomingCallLabel': 'Llamada Entrante',
-      'unknownCallerText': 'Desconocido',
-      'voiceCallText': 'Voz',
-      'videoCallText': 'Video',
-      'ongoingCallText': 'llamada',
-    },
-    'French': {
-      'answerButtonText': 'Répondre',
-      'declineButtonText': 'Refuser',
-      'hangupButtonText': 'Raccrocher',
-      'incomingVoiceCallText': 'Appel Vocal Entrant',
-      'incomingVideoCallText': 'Appel Vidéo Entrant',
-      'callInProgressText': 'Appel en Cours',
-      'tapToReturnText': 'Appuyez pour revenir à l\'appel',
-      'incomingCallLabel': 'Appel Entrant',
-      'unknownCallerText': 'Inconnu',
-      'voiceCallText': 'Voix',
-      'videoCallText': 'Vidéo',
-      'ongoingCallText': 'appel',
-    },
-    'Arabic': {
-      'answerButtonText': 'إجابة',
-      'declineButtonText': 'رفض',
-      'hangupButtonText': 'إنهاء',
-      'incomingVoiceCallText': 'مكالمة صوتية واردة',
-      'incomingVideoCallText': 'مكالمة فيديو واردة',
-      'callInProgressText': 'مكالمة جارية',
-      'tapToReturnText': 'اضغط للعودة إلى المكالمة',
-      'incomingCallLabel': 'مكالمة واردة',
-      'unknownCallerText': 'غير معروف',
-      'voiceCallText': 'صوت',
-      'videoCallText': 'فيديو',
-      'ongoingCallText': 'مكالمة',
-    },
-  };
 
   @override
   void initState() {
@@ -281,7 +198,7 @@ class _CustomizationDemoScreenState extends State<CustomizationDemoScreen> {
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
           childAspectRatio: 3,
-          children: _themes.entries.map((entry) {
+          children: AppThemes.themes.entries.map((entry) {
             final isSelected = _selectedTheme == entry.key;
             final theme = entry.value;
 
@@ -366,12 +283,12 @@ class _CustomizationDemoScreenState extends State<CustomizationDemoScreen> {
           vertical: 12,
         ),
       ),
-      items: _languages.keys.map((String language) {
+      items: AppLanguages.languageNames.map((String language) {
         return DropdownMenuItem<String>(
           value: language,
           child: Row(
             children: [
-              Text(_getLanguageFlag(language)),
+              Text(AppLanguages.getLanguageFlag(language)),
               const SizedBox(width: 8),
               Text(language),
             ],
@@ -384,21 +301,6 @@ class _CustomizationDemoScreenState extends State<CustomizationDemoScreen> {
         }
       },
     );
-  }
-
-  String _getLanguageFlag(String language) {
-    switch (language) {
-      case 'English':
-        return '🇺🇸';
-      case 'Spanish':
-        return '🇪🇸';
-      case 'French':
-        return '🇫🇷';
-      case 'Arabic':
-        return '🇸🇦';
-      default:
-        return '🌍';
-    }
   }
 
   Widget _buildCallSettings() {
@@ -676,8 +578,8 @@ class _CustomizationDemoScreenState extends State<CustomizationDemoScreen> {
   }
 
   Map<String, dynamic> _getCurrentConfiguration() {
-    final theme = _themes[_selectedTheme]!;
-    final language = _languages[_selectedLanguage]!;
+    final theme = AppThemes.getTheme(_selectedTheme)!;
+    final language = AppLanguages.getLanguage(_selectedLanguage)!;
 
     return {
       // Visual customization
@@ -716,15 +618,24 @@ class _CustomizationDemoScreenState extends State<CustomizationDemoScreen> {
       final config = _getCurrentConfiguration();
       final sampleCaller = SampleCaller.getRandom();
 
-      await _vCallkitPlugin.showIncomingCallWithConfig({
-        'callData': {
-          'id': DateTime.now().millisecondsSinceEpoch.toString(),
-          'callerName': sampleCaller.name,
-          'callerNumber': sampleCaller.phoneNumber,
-          'isVideoCall': isVideoCall,
+      final callData = CallData(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        callerName: sampleCaller.name,
+        callerNumber: sampleCaller.phoneNumber,
+        callerAvatar: sampleCaller.avatar,
+        isVideoCall: isVideoCall,
+        extra: {
+          'source': 'customization_demo',
+          'timestamp': DateTime.now().toIso8601String(),
         },
-        'config': config,
-      });
+      );
+
+      final configuration = VCallkitCallConfiguration.fromMap(config);
+
+      await _vCallkitPlugin.showIncomingCallWithConfiguration(
+        callData: callData,
+        configuration: configuration,
+      );
 
       // Check if widget is still mounted before using context
       if (!mounted) return;

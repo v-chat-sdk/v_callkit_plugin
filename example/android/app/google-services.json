@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "984544175024",
+    "project_id": "v-callkit-plugin",
+    "storage_bucket": "v-callkit-plugin.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:984544175024:android:047024898b346e9a602c75",
+        "android_client_info": {
+          "package_name": "com.v_chat_sdk.v_callkit_plugin_example"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCq4RCDVNDI4eHVGWui-uMheeGL6uhToz0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

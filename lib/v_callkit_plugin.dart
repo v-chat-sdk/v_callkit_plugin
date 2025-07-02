@@ -5,6 +5,7 @@ import 'v_callkit_plugin_method_channel.dart';
 import 'models/call_data.dart';
 import 'models/call_event.dart';
 import 'models/ui_configuration.dart';
+import 'models/call_configuration.dart';
 
 /// Main plugin class for VCallkit functionality
 class VCallkitPlugin {
@@ -115,8 +116,26 @@ class VCallkitPlugin {
     return VCallkitPluginPlatform.instance.showIncomingCall(callData.toMap());
   }
 
-  /// Show an incoming call with custom configuration
-  /// This allows per-call customization overriding global settings
+  /// Show an incoming call with custom configuration using strongly-typed models
+  /// This method provides type safety and eliminates the need for manual map construction
+  Future<bool> showIncomingCallWithConfiguration({
+    required CallData callData,
+    VCallkitCallConfiguration? configuration,
+  }) {
+    final data = <String, dynamic>{
+      'callData': callData.toMap(),
+    };
+
+    if (configuration != null) {
+      data['config'] = configuration.toMap();
+    }
+
+    return VCallkitPluginPlatform.instance.showIncomingCallWithConfig(data);
+  }
+
+  /// Show an incoming call with custom configuration (legacy method - kept for backward compatibility)
+  /// Use showIncomingCallWithConfiguration for better type safety
+  @Deprecated('Use showIncomingCallWithConfiguration instead')
   Future<bool> showIncomingCallWithConfig(Map<String, dynamic> data) {
     return VCallkitPluginPlatform.instance.showIncomingCallWithConfig(data);
   }
@@ -271,7 +290,7 @@ class VCallkitPlugin {
     required String callerNumber,
     String? callerAvatar,
     Map<String, dynamic> extra = const {},
-    VCallkitUIConfiguration? customConfig,
+    VCallkitCallConfiguration? callConfiguration,
   }) {
     return _showIncomingCallWithType(
       callId: callId,
@@ -280,7 +299,7 @@ class VCallkitPlugin {
       callerAvatar: callerAvatar,
       isVideoCall: false,
       extra: extra,
-      customConfig: customConfig,
+      callConfiguration: callConfiguration,
     );
   }
 
@@ -291,7 +310,7 @@ class VCallkitPlugin {
     required String callerNumber,
     String? callerAvatar,
     Map<String, dynamic> extra = const {},
-    VCallkitUIConfiguration? customConfig,
+    VCallkitCallConfiguration? callConfiguration,
   }) {
     return _showIncomingCallWithType(
       callId: callId,
@@ -300,7 +319,7 @@ class VCallkitPlugin {
       callerAvatar: callerAvatar,
       isVideoCall: true,
       extra: extra,
-      customConfig: customConfig,
+      callConfiguration: callConfiguration,
     );
   }
 
@@ -312,7 +331,7 @@ class VCallkitPlugin {
     String? callerAvatar,
     required bool isVideoCall,
     Map<String, dynamic> extra = const {},
-    VCallkitUIConfiguration? customConfig,
+    VCallkitCallConfiguration? callConfiguration,
   }) {
     final callData = CallData(
       id: callId ?? DateTime.now().millisecondsSinceEpoch.toString(),
@@ -323,14 +342,10 @@ class VCallkitPlugin {
       extra: extra,
     );
 
-    if (customConfig != null) {
-      return showIncomingCallWithConfig({
-        'callData': callData.toMap(),
-        'config': customConfig.toMap(),
-      });
-    }
-
-    return showIncomingCall(callData);
+    return showIncomingCallWithConfiguration(
+      callData: callData,
+      configuration: callConfiguration,
+    );
   }
 
   // Public API - Event Filtering
@@ -394,7 +409,7 @@ class VCallkitPlugin {
     String? callerAvatar,
     required bool isVideoCall,
     Map<String, dynamic> extra = const {},
-    VCallkitUIConfiguration? customConfig,
+    VCallkitCallConfiguration? callConfiguration,
   }) {
     final callData = CallData(
       id: callId ?? DateTime.now().millisecondsSinceEpoch.toString(),
@@ -405,14 +420,10 @@ class VCallkitPlugin {
       extra: extra,
     );
 
-    if (customConfig != null) {
-      return showIncomingCallWithConfig({
-        'callData': callData.toMap(),
-        'config': customConfig.toMap(),
-      });
-    }
-
-    return showIncomingCall(callData);
+    return showIncomingCallWithConfiguration(
+      callData: callData,
+      configuration: callConfiguration,
+    );
   }
 
   /// Filter stream by call ID

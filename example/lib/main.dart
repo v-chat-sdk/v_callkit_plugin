@@ -1,13 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'screens/home_screen.dart';
 import 'utils/app_colors.dart';
-import 'services/background_call_scheduler.dart';
+import 'services/firebase_background_handler.dart';
+import 'firebase_options.dart';
+
+/// Firebase background message handler - must be top-level function
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Initialize Firebase for background context
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Initialize the background handler
+  await FirebaseBackgroundHandler.initialize();
+
+  // Handle the background message
+  await FirebaseBackgroundHandler.handleBackgroundMessage(message);
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize WorkManager for background call scheduling
-  await BackgroundCallScheduler.initialize();
+  // Initialize Firebase
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Set the background message handler
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+  // Initialize Firebase background handler
+  await FirebaseBackgroundHandler.initialize();
 
   runApp(const MyApp());
 }

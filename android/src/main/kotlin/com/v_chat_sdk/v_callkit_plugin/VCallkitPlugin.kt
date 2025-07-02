@@ -960,20 +960,82 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
                 Log.d(TAG, "Vibration skipped due to system settings (silent mode, DND, or vibration disabled)")
                 return
             }
-            
+
+            // Enhanced vibration for background context - use longer pattern for better visibility
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val pattern = longArrayOf(0, 1000, 500, 1000, 500, 1000)
+                val pattern = longArrayOf(0, 1000, 300, 1000, 300, 1000, 300, 1000)
                 val vibrationEffect = VibrationEffect.createWaveform(pattern, 0) // 0 means repeat
-                vibrator.vibrate(vibrationEffect)
-                Log.d(TAG, "Call vibration started (respecting system settings)")
+                
+                // Use AUDIO_ATTRIBUTES for better background compatibility
+                val audioAttributes = AudioAttributes.Builder()
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                    .build()
+                
+                @Suppress("DEPRECATION") // VibrationEffect.createWaveform with AudioAttributes is newer
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    // Android 13+ - Use createWaveform with AudioAttributes for better background support
+                    try {
+                        val enhancedEffect = VibrationEffect.createWaveform(pattern, -1)
+                        vibrator.vibrate(enhancedEffect, audioAttributes)
+                        Log.d(TAG, "Enhanced call vibration started for Android 13+ (background-compatible)")
+                    } catch (e: Exception) {
+                        // Fallback to standard method
+                        vibrator.vibrate(vibrationEffect)
+                        Log.d(TAG, "Fallback call vibration started for Android 13+ (${e.message})")
+                    }
+                } else {
+                    vibrator.vibrate(vibrationEffect)
+                    Log.d(TAG, "Call vibration started for Android 8+ (respecting system settings)")
+                }
             } else {
                 @Suppress("DEPRECATION")
-                val pattern = longArrayOf(0, 1000, 500, 1000, 500, 1000)
+                val pattern = longArrayOf(0, 1000, 300, 1000, 300, 1000, 300, 1000)
                 vibrator.vibrate(pattern, 0) // 0 means repeat
                 Log.d(TAG, "Call vibration started (legacy mode, respecting system settings)")
             }
+            
+            // Log vibration success for debugging
+            Log.d(TAG, "Vibration successfully triggered - pattern will repeat until stopped")
+            
         } catch (e: Exception) {
             Log.e(TAG, "Error starting call vibration: ${e.message}")
+            e.printStackTrace()
+            
+            // Try alternative vibration method for background processes
+            tryAlternativeVibration()
+        }
+    }
+    
+    /**
+     * Alternative vibration method for background processes or when main method fails
+     */
+    private fun tryAlternativeVibration() {
+        try {
+            Log.d(TAG, "Attempting alternative vibration method for background context")
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Use a simple one-shot vibration that's more likely to work in background
+                val vibrationEffect = VibrationEffect.createOneShot(2000, VibrationEffect.DEFAULT_AMPLITUDE)
+                vibrator.vibrate(vibrationEffect)
+                
+                // Chain multiple one-shots for repeated effect
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    try {
+                        vibrator.vibrate(VibrationEffect.createOneShot(1000, VibrationEffect.DEFAULT_AMPLITUDE))
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Secondary vibration failed: ${e.message}")
+                    }
+                }, 2500)
+                
+                Log.d(TAG, "Alternative vibration method started (one-shot for background)")
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(2000)
+                Log.d(TAG, "Alternative vibration method started (legacy one-shot)")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Alternative vibration method also failed: ${e.message}")
         }
     }
     
@@ -1218,14 +1280,18 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
      */
     private fun shouldVibrate(): Boolean {
         try {
+            Log.d(TAG, "=== VIBRATION CHECK DEBUG START ===")
+            
             // Check if vibration is disabled in UI configuration
             val enableVibration = getUIConfigValue("enableVibration", true) as? Boolean ?: true
+            Log.d(TAG, "UI Config enableVibration: $enableVibration")
             if (!enableVibration) {
                 Log.d(TAG, "Vibration blocked: Disabled in UI configuration")
                 return false
             }
             
             val ringerMode = audioManager.ringerMode
+            Log.d(TAG, "Ringer mode: $ringerMode (NORMAL=2, VIBRATE=1, SILENT=0)")
             
             // Allow vibration in vibrate mode, block in silent mode
             if (ringerMode == AudioManager.RINGER_MODE_SILENT) {
@@ -1236,6 +1302,7 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             // Check Do Not Disturb status (API 23+)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 val interruptionFilter = notificationManager.currentInterruptionFilter
+                Log.d(TAG, "DND Interruption filter: $interruptionFilter")
                 
                 // Block vibration in strict DND modes
                 if (interruptionFilter == NotificationManager.INTERRUPTION_FILTER_NONE) {
@@ -1250,9 +1317,11 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
                 
                 // In priority mode, check if calls are allowed
                 if (interruptionFilter == NotificationManager.INTERRUPTION_FILTER_PRIORITY) {
+                    Log.d(TAG, "DND Priority mode detected, checking call permissions...")
                     if (notificationManager.isNotificationPolicyAccessGranted) {
                         val policy = notificationManager.notificationPolicy
                         val callsAllowed = (policy.priorityCategories and NotificationManager.Policy.PRIORITY_CATEGORY_CALLS) != 0
+                        Log.d(TAG, "Calls allowed in priority mode: $callsAllowed")
                         if (!callsAllowed) {
                             Log.d(TAG, "Vibration blocked: Do Not Disturb - Priority mode without calls")
                             return false
@@ -1265,7 +1334,9 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             }
             
             // Check if device has vibrator capability
-            if (!vibrator.hasVibrator()) {
+            val hasVibrator = vibrator.hasVibrator()
+            Log.d(TAG, "Device has vibrator: $hasVibrator")
+            if (!hasVibrator) {
                 Log.d(TAG, "Vibration blocked: Device has no vibrator")
                 return false
             }
@@ -1278,6 +1349,7 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
                         Settings.System.VIBRATE_WHEN_RINGING,
                         1
                     )
+                    Log.d(TAG, "System vibration setting: $vibrationSetting (1=enabled, 0=disabled)")
                     if (vibrationSetting == 0) {
                         Log.d(TAG, "Vibration blocked: System vibration for calls is disabled")
                         return false
@@ -1287,12 +1359,23 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
                 }
             }
             
+            // Check vibrator permissions
+            val hasVibratePermission = ContextCompat.checkSelfPermission(
+                context, 
+                Manifest.permission.VIBRATE
+            ) == PackageManager.PERMISSION_GRANTED
+            Log.d(TAG, "VIBRATE permission granted: $hasVibratePermission")
+            
+            Log.d(TAG, "=== VIBRATION CHECK RESULT: ALLOWED ===")
             return true
         } catch (e: Exception) {
             Log.e(TAG, "Error checking vibration conditions: ${e.message}")
+            e.printStackTrace()
             return false
         }
     }
+    
+
     
     // Battery optimization handling
     private fun isBatteryOptimizationIgnored(): Boolean {
