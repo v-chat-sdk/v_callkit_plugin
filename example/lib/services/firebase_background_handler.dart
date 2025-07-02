@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:developer' as developer;
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:v_callkit_plugin/models/call_configuration.dart';
 import 'package:v_callkit_plugin/v_callkit_plugin.dart';
 import 'package:v_callkit_plugin/models/call_data.dart';
@@ -91,13 +92,15 @@ class FirebaseBackgroundHandler {
           message.data['isVideoCall'] == 'true' ||
           message.data['callType'] == 'video' ||
           random.nextBool();
-
+      final file = await DefaultCacheManager().getSingleFile(
+        message.data['callerAvatar'],
+      );
       // Create call data
       final callData = CallData(
         id: 'firebase_call_${DateTime.now().millisecondsSinceEpoch}',
         callerName: message.data['callerName'] ?? fakeCaller['name']!,
         callerNumber: message.data['callerNumber'] ?? fakeCaller['number']!,
-        callerAvatar: message.data['callerAvatar'] ?? fakeCaller['avatar']!,
+        callerAvatar: file.path,
         isVideoCall: isVideoCall,
         extra: {
           'source': 'firebase_background',
@@ -118,7 +121,7 @@ class FirebaseBackgroundHandler {
       final success = await _plugin.showIncomingCall(
         callData: callData,
         configuration: VCallkitCallConfiguration(
-          answerButtonText: "ANswer",
+          answerButtonText: "xxxxxx",
           enableVibration: true,
           showCallType: true,
         ),

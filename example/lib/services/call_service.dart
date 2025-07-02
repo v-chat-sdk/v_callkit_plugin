@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'dart:developer' as developer;
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:v_callkit_plugin/v_callkit_plugin.dart';
 import 'package:v_callkit_plugin/models/call_data.dart';
 import 'package:v_callkit_plugin/models/call_configuration.dart';
@@ -54,15 +55,19 @@ class CallService {
   /// Show incoming call with random sample caller
   Future<bool> showIncomingCall({required bool isVideo}) async {
     final caller = _getRandomCaller();
-
+    final file = await DefaultCacheManager().getSingleFile(caller.avatar);
     try {
       final callData = _createCallData(
-        caller: caller,
+        caller: caller.copyWith(avatar: file.path),
         isVideo: isVideo,
         source: 'call_simulation',
       );
 
-      final success = await _plugin.showIncomingCall(callData: callData);
+      final success = await _plugin.showIncomingCall(
+        callData: callData,
+        configuration: VCallkitCallConfiguration(
+        ),
+      );
 
       if (success) {
         _eventLogger.addEvent(

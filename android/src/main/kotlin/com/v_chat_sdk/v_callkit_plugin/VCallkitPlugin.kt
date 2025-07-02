@@ -385,8 +385,8 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         Thread {
             try {
                 val avatarIcon = if (!callData.callerAvatar.isNullOrEmpty()) {
-                    // Try to load avatar from URL
-                    loadAvatarFromUrl(callData.callerAvatar!!) ?: generateInitialsAvatar(callData.callerName)
+                    // Try to load avatar from local file path
+                    loadAvatarFromFile(callData.callerAvatar!!) ?: generateInitialsAvatar(callData.callerName)
                 } else {
                     // Generate avatar from initials
                     generateInitialsAvatar(callData.callerName)
@@ -405,38 +405,21 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         }.start()
     }
     
-    /**
-     * Load avatar image from URL
-     * Returns Icon for Android 7+ or null if loading fails
-     */
-    private fun loadAvatarFromUrl(avatarUrl: String): Icon? {
+    private fun loadAvatarFromFile(filePath: String): Icon? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return null
-        
         return try {
-            Log.d(TAG, "Loading avatar from URL: $avatarUrl")
-            
-            val url = URL(avatarUrl)
-            val connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = 5000 // 5 second timeout
-            connection.readTimeout = 10000 // 10 second timeout
-            connection.doInput = true
-            connection.connect()
-            
-            val inputStream: InputStream = connection.inputStream
-            val bitmap = BitmapFactory.decodeStream(inputStream)
-            inputStream.close()
-            connection.disconnect()
-            
+            Log.d(TAG, "Loading avatar from file: $filePath")
+            val bitmap = BitmapFactory.decodeFile(filePath)
             if (bitmap != null) {
                 val circularBitmap = createCircularBitmap(bitmap)
-                Log.d(TAG, "Avatar loaded successfully from URL")
+                Log.d(TAG, "Avatar loaded successfully from file")
                 Icon.createWithBitmap(circularBitmap)
             } else {
-                Log.w(TAG, "Failed to decode bitmap from URL")
+                Log.w(TAG, "Failed to decode bitmap from file")
                 null
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to load avatar from URL: ${e.message}")
+            Log.e(TAG, "Failed to load avatar from file: ${e.message}")
             null
         }
     }
@@ -1559,7 +1542,7 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             val avatarIcon = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 if (!callData.callerAvatar.isNullOrEmpty()) {
                     // Try to load from URL, but fallback to initials if it fails
-                    loadAvatarFromUrl(callData.callerAvatar!!) ?: generateInitialsAvatar(callData.callerName)
+                    loadAvatarFromFile(callData.callerAvatar!!) ?: generateInitialsAvatar(callData.callerName)
                 } else {
                     generateInitialsAvatar(callData.callerName)
                 }
