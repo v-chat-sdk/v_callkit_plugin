@@ -142,11 +142,6 @@ object CallConnectionManager {
         return if (session != null && session.state == CallState.RINGING) {
             session.state = CallState.ENDED
             clearIncomingCallData()
-            // Send Flutter callback
-            VCallkitPlugin.methodChannel?.invokeMethod("onCallRejected", mapOf(
-                "callId" to session.callData.id,
-                "timestamp" to System.currentTimeMillis()
-            ))
             Log.d(TAG, "Call rejected: ${session.callData.id}")
             true
         } else {

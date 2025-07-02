@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'dart:developer' as developer;
-import 'package:flutter/services.dart';
 import 'package:v_callkit_plugin/v_callkit_plugin.dart';
 import 'package:v_callkit_plugin/models/call_data.dart';
 import 'package:v_callkit_plugin/models/call_configuration.dart';
@@ -28,11 +27,8 @@ class CallService {
 
   /// Get platform version
   Future<String> getPlatformVersion() async {
-    try {
-      return await _plugin.getPlatformVersion() ?? 'Unknown platform version';
-    } on PlatformException catch (e) {
-      return 'Failed to get platform version: ${e.message}';
-    }
+    // Platform version method was removed from minimal API
+    return 'Platform version not available in minimal API';
   }
 
   /// Check if there's an active call
@@ -66,7 +62,7 @@ class CallService {
         source: 'call_simulation',
       );
 
-      final success = await _plugin.showIncomingCall(callData);
+      final success = await _plugin.showIncomingCall(callData: callData);
 
       if (success) {
         _eventLogger.addEvent(
@@ -118,7 +114,7 @@ class CallService {
         '📳 Triggering test call with vibration enabled...',
       );
 
-      final result = await _plugin.showIncomingCallWithConfiguration(
+      final result = await _plugin.showIncomingCall(
         callData: testCallData,
         configuration: config,
       );
@@ -128,9 +124,8 @@ class CallService {
           'Test vibration call triggered successfully',
         );
 
-        // Get debug info for troubleshooting
-        final debugInfo = await _plugin.getCallManagerDebugInfo();
-        _eventLogger.addEvent('🔍 Debug info: $debugInfo');
+        // Debug info was removed from minimal API
+        _eventLogger.addEvent('🔍 Debug info: not available in minimal API');
       } else {
         _eventLogger.addErrorEvent('Failed to trigger test vibration call');
       }

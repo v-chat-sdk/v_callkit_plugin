@@ -120,7 +120,7 @@ class FirebaseBackgroundHandler {
       );
 
       // Show the incoming call
-      final success = await _plugin.showIncomingCall(callData);
+      final success = await _plugin.showIncomingCall(callData: callData);
 
       if (success) {
         developer.log(

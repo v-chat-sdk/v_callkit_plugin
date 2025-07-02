@@ -73,15 +73,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void _setupCallListeners() {
     final plugin = _callService.plugin;
 
-    // Listen to all call events
-    plugin.onCallEvent.listen((event) {
-      _eventLogger.addCallEvent(event.action.name, event.callId);
-      _updateCallStatus();
-    });
-
-    // Listen to specific events
+    // Listen to essential events only
     plugin.onCallAnswered.listen(_handleCallAnswered);
-    plugin.onCallRejected.listen(_handleCallRejected);
     plugin.onCallEnded.listen(_handleCallEnded);
     plugin.onCallStateChanged.listen(_handleCallStateChanged);
   }
@@ -104,11 +97,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _eventLogger.addSuccessEvent('Call Answered: ${event.callId}');
     _showSnackBar(AppStrings.callAnswered, AppColors.success);
     await _startPersistentNotification(event.callId);
-  }
-
-  void _handleCallRejected(dynamic event) {
-    _eventLogger.addErrorEvent('Call Rejected: ${event.callId}');
-    _showSnackBar(AppStrings.callRejected, AppColors.error);
   }
 
   Future<void> _handleCallEnded(dynamic event) async {

@@ -125,7 +125,7 @@ object CallConstants {
     
     // Flutter callback methods
     const val CALLBACK_ON_CALL_ANSWERED = "onCallAnswered"
-    const val CALLBACK_ON_CALL_REJECTED = "onCallRejected"
+
     const val CALLBACK_ON_CALL_ENDED = "onCallEnded"
     
     // Call state strings

@@ -105,12 +105,6 @@ class CallActionReceiver : BroadcastReceiver() {
             // Stop sounds and dismiss notification completely
             dismissIncomingCallNotification(context)
             
-            // Notify Flutter about call decline (only if app is running)
-            VCallkitPlugin.methodChannel?.invokeMethod("onCallRejected", mapOf(
-                "callId" to callId,
-                "timestamp" to System.currentTimeMillis()
-            ))
-            
             // Update call connection manager
             CallConnectionManager.rejectCall(callId)
             

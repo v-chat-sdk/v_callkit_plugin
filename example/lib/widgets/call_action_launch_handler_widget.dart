@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:developer' as developer;
 
-import 'package:v_callkit_plugin/v_callkit_plugin.dart';
 import 'package:v_callkit_plugin/models/call_data.dart';
 import '../utils/app_colors.dart';
 
@@ -63,7 +62,6 @@ class CallActionLaunchHandlerWidget extends StatefulWidget {
 
 class _CallActionLaunchHandlerWidgetState
     extends State<CallActionLaunchHandlerWidget> {
-  final _vCallkitPlugin = VCallkitPlugin();
   bool _hasCheckedLaunchData = false;
   Map<String, dynamic>? _lastLaunchData;
 
@@ -80,45 +78,15 @@ class _CallActionLaunchHandlerWidgetState
     if (_hasCheckedLaunchData) return;
 
     try {
-      // Check if app was launched from call action
-      final hasLaunchData = await _vCallkitPlugin.hasCallActionLaunchData();
+      // Call action launch detection was removed from minimal API
+      developer.log(
+        'Call action launch detection not available in minimal API',
+        name: 'CallActionLaunch',
+      );
 
-      if (hasLaunchData) {
-        // Get the launch data (this also clears it)
-        final launchData = await _vCallkitPlugin.getLastCallActionLaunch();
-
-        if (launchData != null && mounted) {
-          // Safely convert the launch data to handle type casting issues
-          final safeLaunchData = _TypeUtils.safeMapConvert(launchData);
-
-          setState(() {
-            _lastLaunchData = safeLaunchData;
-          });
-
-          final action = safeLaunchData['action']?.toString() ?? '';
-          final callDataMap = _TypeUtils.safeMapConvert(
-            safeLaunchData['callData'],
-          );
-          final callData = CallData.fromMap(callDataMap);
-
-          developer.log(
-            'App launched from call action: $action for ${callData.callerName}',
-            name: 'CallActionLaunch',
-          );
-
-          widget.onAddToEventLog(
-            '🚀 App launched from ${action.toLowerCase()} action: ${callData.callerName}',
-          );
-
-          widget.onShowSnackBar(
-            'App launched from call ${action.toLowerCase()} action!\nCaller: ${callData.callerName}',
-            action == 'ANSWER' ? AppColors.success : AppColors.warning,
-          );
-
-          // Notify the parent about the call action launch
-          widget.onCallActionLaunch(action, callData);
-        }
-      }
+      widget.onAddToEventLog(
+        '⚠️ Call action launch detection not available in minimal API',
+      );
 
       _hasCheckedLaunchData = true;
     } catch (e) {

@@ -237,32 +237,17 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
     
     override fun onMethodCall(call: MethodCall, result: Result) {
         when (call.method) {
-            "getPlatformVersion" -> {
-                result.success("Android ${android.os.Build.VERSION.RELEASE}")
-            }
             "hasPermissions" -> {
                 result.success(hasRequiredPermissions())
             }
             "requestPermissions" -> {
                 handleRequestPermissions(result)
             }
-            "showIncomingCall" -> {
-                handleShowIncomingCall(call, result)
-            }
             "showIncomingCallWithConfig" -> {
                 handleShowIncomingCallWithConfig(call, result)
             }
-            "showIncomingCallNative" -> {
-                handleShowIncomingCallNative(call, result)
-            }
-            "endCall" -> {
-                handleEndCall(call, result)
-            }
             "answerCall" -> {
                 handleAnswerCall(call, result)
-            }
-            "rejectCall" -> {
-                handleRejectCall(call, result)
             }
             "isCallActive" -> {
                 result.success(CallConnectionManager.hasActiveCall())
@@ -270,65 +255,11 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             "getActiveCallData" -> {
                 result.success(CallConnectionManager.getActiveCallData())
             }
-            "setCustomRingtone" -> {
-                handleSetCustomRingtone(call, result)
-            }
-            "getSystemRingtones" -> {
-                handleGetSystemRingtones(result)
-            }
-            "checkBatteryOptimization" -> {
-                result.success(isBatteryOptimizationIgnored())
-            }
-            "requestBatteryOptimization" -> {
-                handleRequestBatteryOptimization(result)
-            }
-            "getDeviceManufacturer" -> {
-                result.success(Build.MANUFACTURER.lowercase())
-            }
-            "getLastCallActionLaunch" -> {
-                handleGetLastCallActionLaunch(result)
-            }
-            "hasCallActionLaunchData" -> {
-                result.success(hasCallActionLaunchData())
-            }
-            "clearCallActionLaunchData" -> {
-                handleClearCallActionLaunchData(result)
-            }
-            "forceShowOngoingNotification" -> {
-                handleForceShowOngoingNotification(call, result)
-            }
-            "forceShowHangupNotification" -> {
-                handleForceShowHangupNotification(call, result)
-            }
-            "showHangupNotification" -> {
-                handleShowHangupNotification(call, result)
-            }
-            "hideHangupNotification" -> {
-                handleHideHangupNotification(result)
-            }
-            "updateHangupNotification" -> {
-                handleUpdateHangupNotification(call, result)
-            }
-            "launchHangupNotificationWithForegroundService" -> {
-                handleLaunchHangupNotificationWithForegroundService(call, result)
-            }
             "startOutgoingCallNotification" -> {
                 handleStartOutgoingCallNotification(call, result)
             }
-            "startIncomingCallNotification" -> {
-                handleStartIncomingCallNotification(call, result)
-            }
             "stopCallForegroundService" -> {
                 handleStopCallForegroundService(result)
-            }
-            "updateCallForegroundService" -> {
-                handleUpdateCallForegroundService(call, result)
-            }
-            "setUIConfiguration" -> {
-                handleSetUIConfiguration(call, result)
-            }
-            "getCallManagerDebugInfo" -> {
-                handleGetCallManagerDebugInfo(result)
             }
             else -> {
                 result.notImplemented()
@@ -396,48 +327,7 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         result.success(hasRequiredPermissions())
     }
     
-    private fun handleShowIncomingCall(call: MethodCall, result: Result) {
-        val arguments = call.arguments as? Map<String, Any>
-        if (arguments == null) {
-            result.error("INVALID_ARGUMENTS", "Call arguments required", null)
-            return
-        }
-        
-        val callData = parseCallData(arguments)
-        if (callData == null) {
-            result.error("INVALID_CALL_DATA", "Valid call data required", null)
-            return
-        }
-        
-        showIncomingCallNotification(callData, result)
-    }
-    
-    private fun handleShowIncomingCallNative(call: MethodCall, result: Result) {
-        val arguments = call.arguments as? Map<String, Any>
-        if (arguments == null) {
-            result.error("INVALID_ARGUMENTS", "Call arguments required", null)
-            return
-        }
-        
-        val callData = parseCallData(arguments)
-        if (callData == null) {
-            result.error("INVALID_CALL_DATA", "Valid call data required", null)
-            return
-        }
-        
-        Log.d(TAG, "Native incoming call request for: ${callData.callerName}")
-        
-        // Use the static method to show incoming call from native context
-        val success = showIncomingCallFromNative(context, callData)
-        
-        if (success) {
-            Log.d(TAG, "Native incoming call shown successfully for: ${callData.callerName}")
-            result.success(true)
-        } else {
-            Log.e(TAG, "Failed to show native incoming call for: ${callData.callerName}")
-            result.error("NATIVE_CALL_ERROR", "Failed to show native incoming call", null)
-        }
-    }
+
     
     private fun parseCallData(arguments: Map<String, Any>): CallData? {
         return try {
@@ -921,16 +811,6 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         return CallActionActivity.createIntent(context, action, callData)
     }
     
-    private fun handleEndCall(call: MethodCall, result: Result) {
-        val callId = call.arguments as? String
-        dismissCallNotification()
-        if (CallConnectionManager.endCall(callId)) {
-            result.success(true)
-        } else {
-            result.error("NO_ACTIVE_CALL", "No active call to end", null)
-        }
-    }
-    
     private fun dismissCallNotification() {
         notificationManager.cancel(CALL_NOTIFICATION_ID)
         notificationManager.cancel(ONGOING_CALL_NOTIFICATION_ID)
@@ -1118,19 +998,6 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             result.success(true)
         } else {
             result.error("NO_ACTIVE_CALL", "No active call to answer", null)
-        }
-    }
-    
-    private fun handleRejectCall(call: MethodCall, result: Result) {
-        val callId = call.arguments as? String
-        
-        // Stop sounds and dismiss all call notifications
-        dismissCallNotification()
-        
-        if (CallConnectionManager.rejectCall(callId)) {
-            result.success(true)
-        } else {
-            result.error("NO_ACTIVE_CALL", "No active call to reject", null)
         }
     }
     
@@ -2222,33 +2089,6 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         } catch (e: Exception) {
             Log.e(TAG, "Error starting outgoing call notification: ${e.message}")
             result.error("OUTGOING_CALL_ERROR", "Failed to start outgoing call notification: ${e.message}", null)
-        }
-    }
-    
-    /**
-     * Start foreground service for incoming calls
-     * This provides explicit control over incoming call notifications
-     */
-    private fun handleStartIncomingCallNotification(call: MethodCall, result: Result) {
-        val arguments = call.arguments as? Map<String, Any>
-        if (arguments == null) {
-            result.error("INVALID_ARGUMENTS", "Call arguments required", null)
-            return
-        }
-        
-        val callData = parseCallData(arguments)
-        if (callData == null) {
-            result.error("INVALID_CALL_DATA", "Valid call data required", null)
-            return
-        }
-        
-        try {
-            CallForegroundService.startIncomingCallService(context, callData)
-            Log.d(TAG, "Incoming call foreground service started for: ${callData.callerName}")
-            result.success(true)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error starting incoming call notification: ${e.message}")
-            result.error("INCOMING_CALL_ERROR", "Failed to start incoming call notification: ${e.message}", null)
         }
     }
     

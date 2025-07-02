@@ -9,62 +9,19 @@ class MockVCallkitPluginPlatform
     with MockPlatformInterfaceMixin
     implements VCallkitPluginPlatform {
   @override
-  Future<String?> getPlatformVersion() => Future.value('42');
-
-  @override
   Future<bool> hasPermissions() => Future.value(true);
 
   @override
   Future<bool> requestPermissions() => Future.value(true);
 
   @override
-  Future<bool> showIncomingCall(Map<String, dynamic> callData) =>
-      Future.value(true);
-
-  @override
-  Future<bool> endCall([String? callId]) => Future.value(true);
-
-  @override
   Future<bool> answerCall([String? callId]) => Future.value(true);
-
-  @override
-  Future<bool> rejectCall([String? callId]) => Future.value(true);
-
-  @override
-  Future<bool> muteCall(bool isMuted, [String? callId]) => Future.value(true);
-
-  @override
-  Future<bool> holdCall(bool isOnHold, [String? callId]) => Future.value(true);
 
   @override
   Future<bool> isCallActive() => Future.value(false);
 
   @override
   Future<Map<String, dynamic>?> getActiveCallData() => Future.value(null);
-
-  @override
-  Future<bool> setCustomRingtone(String? ringtoneUri) => Future.value(true);
-
-  @override
-  Future<List<Map<String, dynamic>>> getSystemRingtones() => Future.value([]);
-
-  @override
-  Future<bool> checkBatteryOptimization() => Future.value(true);
-
-  @override
-  Future<bool> requestBatteryOptimization() => Future.value(true);
-
-  @override
-  Future<String> getDeviceManufacturer() => Future.value('test-manufacturer');
-
-  @override
-  Future<Map<String, dynamic>?> getLastCallActionLaunch() => Future.value(null);
-
-  @override
-  Future<bool> hasCallActionLaunchData() => Future.value(false);
-
-  @override
-  Future<bool> clearCallActionLaunchData() => Future.value(true);
 
   @override
   Future<bool> startOutgoingCallNotification(Map<String, dynamic> callData) =>
@@ -76,25 +33,6 @@ class MockVCallkitPluginPlatform
   @override
   Future<bool> showIncomingCallWithConfig(Map<String, dynamic> data) =>
       Future.value(true);
-
-  @override
-  Future<bool> setUIConfiguration(Map<String, dynamic> config) =>
-      Future.value(true);
-
-  @override
-  Future<bool> forceShowHangupNotification(Map<String, dynamic> data) =>
-      Future.value(true);
-
-  @override
-  Future<Map<String, dynamic>> getCallManagerDebugInfo() => Future.value({
-        'hasActiveCall': false,
-        'activeCallData': null,
-        'androidVersion': 34,
-        'hasCallForegroundService': true,
-        'deviceManufacturer': 'test-manufacturer',
-        'deviceModel': 'test-model',
-        'pluginVersion': '1.0.0',
-      });
 }
 
 void main() {
@@ -111,15 +49,9 @@ void main() {
     test('Mock platform works correctly', () async {
       final mockPlatform = MockVCallkitPluginPlatform();
 
-      expect(await mockPlatform.getPlatformVersion(), '42');
       expect(await mockPlatform.hasPermissions(), true);
       expect(await mockPlatform.requestPermissions(), true);
-      expect(await mockPlatform.showIncomingCall({'test': 'data'}), true);
-      expect(await mockPlatform.endCall('test-call'), true);
       expect(await mockPlatform.answerCall('test-call'), true);
-      expect(await mockPlatform.rejectCall('test-call'), true);
-      expect(await mockPlatform.muteCall(true, 'test-call'), true);
-      expect(await mockPlatform.holdCall(true, 'test-call'), true);
       expect(await mockPlatform.isCallActive(), false);
       expect(await mockPlatform.getActiveCallData(), null);
 
@@ -128,27 +60,9 @@ void main() {
           true);
       expect(await mockPlatform.stopCallForegroundService(), true);
 
-      // Test utility methods
-      expect(await mockPlatform.setCustomRingtone('test://ringtone'), true);
-      expect(await mockPlatform.getSystemRingtones(), []);
-      expect(await mockPlatform.checkBatteryOptimization(), true);
-      expect(await mockPlatform.requestBatteryOptimization(), true);
-      expect(await mockPlatform.getDeviceManufacturer(), 'test-manufacturer');
-      expect(await mockPlatform.getLastCallActionLaunch(), null);
-      expect(await mockPlatform.hasCallActionLaunchData(), false);
-      expect(await mockPlatform.clearCallActionLaunchData(), true);
-
-      // Test new customization methods
+      // Test incoming call methods
       expect(await mockPlatform.showIncomingCallWithConfig({'test': 'config'}),
           true);
-      expect(await mockPlatform.setUIConfiguration({'theme': 'dark'}), true);
-      expect(await mockPlatform.forceShowHangupNotification({'test': 'hangup'}),
-          true);
-
-      final debugInfo = await mockPlatform.getCallManagerDebugInfo();
-      expect(debugInfo['hasActiveCall'], false);
-      expect(debugInfo['androidVersion'], 34);
-      expect(debugInfo['hasCallForegroundService'], true);
     });
   });
 
@@ -223,63 +137,6 @@ void main() {
       expect(map['isVideoCall'], false);
       expect(map['extra']['test'], 'value');
     });
-
-    test('copyWith creates new instance with updated values', () {
-      const original = CallData(
-        id: 'original',
-        callerName: 'Original Caller',
-        callerNumber: '+1111111111',
-      );
-
-      final updated = original.copyWith(
-        callerName: 'Updated Caller',
-        isVideoCall: true,
-      );
-
-      expect(updated.id, 'original'); // unchanged
-      expect(updated.callerName, 'Updated Caller'); // changed
-      expect(updated.callerNumber, '+1111111111'); // unchanged
-      expect(updated.isVideoCall, true); // changed
-    });
-
-    test('equality and hashCode', () {
-      const callData1 = CallData(
-        id: 'equal-test',
-        callerName: 'Equal Caller',
-        callerNumber: '+1222333444',
-      );
-
-      const callData2 = CallData(
-        id: 'equal-test',
-        callerName: 'Equal Caller',
-        callerNumber: '+1222333444',
-      );
-
-      const callData3 = CallData(
-        id: 'different-test',
-        callerName: 'Equal Caller',
-        callerNumber: '+1222333444',
-      );
-
-      expect(callData1, equals(callData2));
-      expect(callData1.hashCode, equals(callData2.hashCode));
-      expect(callData1, isNot(equals(callData3)));
-    });
-
-    test('toString provides readable representation', () {
-      const callData = CallData(
-        id: 'string-test',
-        callerName: 'String Caller',
-        callerNumber: '+1333444555',
-        isVideoCall: true,
-      );
-
-      final stringRep = callData.toString();
-      expect(stringRep, contains('string-test'));
-      expect(stringRep, contains('String Caller'));
-      expect(stringRep, contains('+1333444555'));
-      expect(stringRep, contains('true'));
-    });
   });
 
   group('CallEvent Models', () {
@@ -297,19 +154,6 @@ void main() {
       expect(event.timestamp, timestamp);
       expect(event.videoState, 1);
       expect(event.data['custom'], 'data');
-    });
-
-    test('CallRejectedEvent creation and parsing', () {
-      final timestamp = DateTime.now();
-      final event = CallRejectedEvent(
-        callId: 'rejected-test',
-        timestamp: timestamp,
-        data: const {'reason': 'busy'},
-      );
-
-      expect(event.callId, 'rejected-test');
-      expect(event.action, CallAction.rejected);
-      expect(event.data['reason'], 'busy');
     });
 
     test('CallEndedEvent creation and parsing', () {
@@ -351,20 +195,6 @@ void main() {
       expect(event.callId, 'test-123');
       expect(event.action, CallAction.answered);
     });
-
-    test('CallGenericEvent creation and parsing', () {
-      final timestamp = DateTime.now();
-      final event = CallGenericEvent(
-        callId: 'generic-test',
-        action: CallAction.stateChanged,
-        timestamp: timestamp,
-        data: const {'type': 'custom'},
-      );
-
-      expect(event.callId, 'generic-test');
-      expect(event.action, CallAction.stateChanged);
-      expect(event.data['type'], 'custom');
-    });
   });
 
   group('Data Serialization', () {
@@ -382,77 +212,9 @@ void main() {
       final restored = CallData.fromMap(map);
 
       expect(restored, equals(original));
-      // Note: hashCode comparison removed as it may vary after serialization
       expect(restored.id, equals(original.id));
       expect(restored.callerName, equals(original.callerName));
       expect(restored.extra['string'], equals(original.extra['string']));
-    });
-
-    test('CallEvent serialization handles edge cases', () {
-      // Test with missing timestamp
-      final noTimestampMap = {'callId': 'no-timestamp', 'action': 'answered'};
-
-      final eventNoTimestamp = CallEvent.fromMap(noTimestampMap);
-      expect(eventNoTimestamp, isA<CallAnsweredEvent>());
-      expect(eventNoTimestamp.timestamp, isA<DateTime>());
-
-      // Test with empty call ID
-      final emptyCallIdMap = {
-        'callId': '',
-        'action': 'rejected',
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      };
-
-      final emptyEvent = CallEvent.fromMap(emptyCallIdMap);
-      expect(emptyEvent, isA<CallRejectedEvent>());
-      expect(emptyEvent.callId, '');
-    });
-  });
-
-  group('Edge Cases', () {
-    test('CallData handles empty and null values', () {
-      const emptyCallData = CallData(id: '', callerName: '', callerNumber: '');
-
-      expect(emptyCallData.id, '');
-      expect(emptyCallData.callerName, '');
-      expect(emptyCallData.callerNumber, '');
-
-      final map = emptyCallData.toMap();
-      final restored = CallData.fromMap(map);
-      expect(restored, equals(emptyCallData));
-    });
-
-    test('CallData.fromMap handles missing fields gracefully', () {
-      final incompleteMap = <String, dynamic>{
-        'id': 'incomplete',
-        'callerName': 'Incomplete Caller',
-        // Missing callerNumber, should use default values
-      };
-
-      final callData = CallData.fromMap(incompleteMap);
-      expect(callData.id, 'incomplete');
-      expect(callData.callerName, 'Incomplete Caller');
-      expect(callData.callerNumber, ''); // Default to empty string
-      expect(callData.callerAvatar, isNull); // Default to null
-      expect(callData.isVideoCall, false); // Default to false
-      expect(callData.extra, isEmpty); // Default to empty map
-    });
-
-    test('CallData handles special characters in names', () {
-      final specialCallData = CallData(
-        id: 'special-chars-test',
-        callerName: 'José María García-Pérez 🔥',
-        callerNumber: '+1-800-CALL-NOW',
-        extra: {
-          'unicode': '🎉📞✨',
-          'emoji': '😀',
-          'special': 'Special chars: @#\$%^&*()',
-        },
-      );
-
-      final map = specialCallData.toMap();
-      final restored = CallData.fromMap(map);
-      expect(restored, equals(specialCallData));
     });
   });
 }

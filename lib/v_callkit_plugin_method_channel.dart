@@ -10,10 +10,8 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
   @visibleForTesting
   final methodChannel = const MethodChannel('v_callkit_plugin');
 
-  // Essential stream controllers only (removed onCallHold, onCallMute, and enhanced streams)
+  // Essential stream controllers only
   final StreamController<Map<String, dynamic>> _callAnsweredController =
-      StreamController<Map<String, dynamic>>.broadcast();
-  final StreamController<Map<String, dynamic>> _callRejectedController =
       StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<Map<String, dynamic>> _callEndedController =
       StreamController<Map<String, dynamic>>.broadcast();
@@ -35,9 +33,6 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
       case 'onCallAnswered':
         _callAnsweredController.add(arguments);
         break;
-      case 'onCallRejected':
-        _callRejectedController.add(arguments);
-        break;
       case 'onCallEnded':
         _callEndedController.add(arguments);
         break;
@@ -57,10 +52,6 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
   Stream<Map<String, dynamic>> get onCallAnswered =>
       _callAnsweredController.stream;
 
-  /// Stream of call rejected events
-  Stream<Map<String, dynamic>> get onCallRejected =>
-      _callRejectedController.stream;
-
   /// Stream of call ended events
   Stream<Map<String, dynamic>> get onCallEnded => _callEndedController.stream;
 
@@ -71,16 +62,8 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
   /// Dispose method to clean up resources
   void dispose() {
     _callAnsweredController.close();
-    _callRejectedController.close();
     _callEndedController.close();
     _callStateChangedController.close();
-  }
-
-  @override
-  Future<String?> getPlatformVersion() async {
-    final version =
-        await methodChannel.invokeMethod<String>('getPlatformVersion');
-    return version;
   }
 
   @override
@@ -97,15 +80,6 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
   }
 
   @override
-  Future<bool> showIncomingCall(Map<String, dynamic> callData) async {
-    final success = await methodChannel.invokeMethod<bool>(
-      'showIncomingCall',
-      callData,
-    );
-    return success ?? false;
-  }
-
-  @override
   Future<bool> showIncomingCallWithConfig(Map<String, dynamic> data) async {
     final success = await methodChannel.invokeMethod<bool>(
       'showIncomingCallWithConfig',
@@ -115,50 +89,9 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
   }
 
   @override
-  Future<bool> setUIConfiguration(Map<String, dynamic> config) async {
-    final success = await methodChannel.invokeMethod<bool>(
-      'setUIConfiguration',
-      config,
-    );
-    return success ?? false;
-  }
-
-  @override
-  Future<bool> forceShowHangupNotification(Map<String, dynamic> data) async {
-    final success = await methodChannel.invokeMethod<bool>(
-      'forceShowHangupNotification',
-      data,
-    );
-    return success ?? false;
-  }
-
-  @override
-  Future<Map<String, dynamic>> getCallManagerDebugInfo() async {
-    final result = await methodChannel.invokeMethod<Map<Object?, Object?>>(
-      'getCallManagerDebugInfo',
-    );
-    return result != null ? _safeMapConvert(result) : {};
-  }
-
-  @override
-  Future<bool> endCall([String? callId]) async {
-    final success = await methodChannel.invokeMethod<bool>('endCall', callId);
-    return success ?? false;
-  }
-
-  @override
   Future<bool> answerCall([String? callId]) async {
     final success = await methodChannel.invokeMethod<bool>(
       'answerCall',
-      callId,
-    );
-    return success ?? false;
-  }
-
-  @override
-  Future<bool> rejectCall([String? callId]) async {
-    final success = await methodChannel.invokeMethod<bool>(
-      'rejectCall',
       callId,
     );
     return success ?? false;
@@ -176,74 +109,6 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
       'getActiveCallData',
     );
     return callData != null ? _safeMapConvert(callData) : null;
-  }
-
-  @override
-  Future<bool> setCustomRingtone(String? ringtoneUri) async {
-    final result = await methodChannel.invokeMethod<bool>(
-      'setCustomRingtone',
-      ringtoneUri,
-    );
-    return result ?? false;
-  }
-
-  @override
-  Future<List<Map<String, dynamic>>> getSystemRingtones() async {
-    final result = await methodChannel.invokeMethod<List<Object?>>(
-      'getSystemRingtones',
-    );
-    return result
-            ?.map((e) => _safeMapConvert(e as Map<Object?, Object?>))
-            .toList() ??
-        [];
-  }
-
-  @override
-  Future<bool> checkBatteryOptimization() async {
-    final result = await methodChannel.invokeMethod<bool>(
-      'checkBatteryOptimization',
-    );
-    return result ?? false;
-  }
-
-  @override
-  Future<bool> requestBatteryOptimization() async {
-    final result = await methodChannel.invokeMethod<bool>(
-      'requestBatteryOptimization',
-    );
-    return result ?? false;
-  }
-
-  @override
-  Future<String> getDeviceManufacturer() async {
-    final result = await methodChannel.invokeMethod<String>(
-      'getDeviceManufacturer',
-    );
-    return result ?? 'unknown';
-  }
-
-  @override
-  Future<Map<String, dynamic>?> getLastCallActionLaunch() async {
-    final result = await methodChannel.invokeMethod<Map<Object?, Object?>>(
-      'getLastCallActionLaunch',
-    );
-    return result != null ? _safeMapConvert(result) : null;
-  }
-
-  @override
-  Future<bool> hasCallActionLaunchData() async {
-    final result = await methodChannel.invokeMethod<bool>(
-      'hasCallActionLaunchData',
-    );
-    return result ?? false;
-  }
-
-  @override
-  Future<bool> clearCallActionLaunchData() async {
-    final result = await methodChannel.invokeMethod<bool>(
-      'clearCallActionLaunchData',
-    );
-    return result ?? false;
   }
 
   @override

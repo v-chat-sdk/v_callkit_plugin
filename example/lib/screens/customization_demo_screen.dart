@@ -632,7 +632,7 @@ class _CustomizationDemoScreenState extends State<CustomizationDemoScreen> {
 
       final configuration = VCallkitCallConfiguration.fromMap(config);
 
-      await _vCallkitPlugin.showIncomingCallWithConfiguration(
+      await _vCallkitPlugin.showIncomingCall(
         callData: callData,
         configuration: configuration,
       );
@@ -658,18 +658,16 @@ class _CustomizationDemoScreenState extends State<CustomizationDemoScreen> {
 
   void _applyGlobalConfiguration() async {
     try {
-      final config = _getCurrentConfiguration();
-      await _vCallkitPlugin.setUIConfigurationFromMap(config);
-
+      // Global UI configuration was removed from minimal API
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text(
-            'Global configuration applied: $_selectedTheme theme, $_selectedLanguage language',
+            'Global UI configuration not available in minimal API. Use per-call configuration instead.',
           ),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 3),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
         ),
       );
     } catch (error) {
@@ -684,28 +682,16 @@ class _CustomizationDemoScreenState extends State<CustomizationDemoScreen> {
 
   void _testHangupNotification() async {
     try {
-      final config = _getCurrentConfiguration();
-      final sampleCaller = SampleCaller.getRandom();
-
-      await _vCallkitPlugin.forceShowHangupNotification({
-        'callData': {
-          'id': 'test_hangup_${DateTime.now().millisecondsSinceEpoch}',
-          'callerName': sampleCaller.name,
-          'callerNumber': sampleCaller.phoneNumber,
-          'isVideoCall': false,
-        },
-        'config': config,
-      });
-
+      // Force hangup notification was removed from minimal API
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Hangup notification shown! Check your notification panel - it should be non-dismissible.',
+            'Hangup notification testing not available in minimal API.',
           ),
-          backgroundColor: Colors.purple,
-          duration: Duration(seconds: 4),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
         ),
       );
     } catch (error) {
@@ -720,8 +706,7 @@ class _CustomizationDemoScreenState extends State<CustomizationDemoScreen> {
 
   void _showDebugInfo() async {
     try {
-      final debugInfo = await _vCallkitPlugin.getCallManagerDebugInfo();
-
+      // Debug info was removed from minimal API
       if (!mounted) return;
 
       showDialog(
@@ -733,13 +718,7 @@ class _CustomizationDemoScreenState extends State<CustomizationDemoScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Android Version: API ${debugInfo['androidVersion']}'),
-                const SizedBox(height: 8),
-                Text('Call Active: ${debugInfo['hasActiveCall']}'),
-                const SizedBox(height: 8),
-                Text(
-                  'Supports Foreground Service: ${debugInfo['hasCallForegroundService']}',
-                ),
+                const Text('Debug information not available in minimal API'),
                 const SizedBox(height: 8),
                 const Text(
                   'Current Configuration:',

@@ -23,10 +23,6 @@ abstract class VCallkitPluginPlatform extends PlatformInterface {
     _instance = instance;
   }
 
-  Future<String?> getPlatformVersion() {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
-
   /// Checks if the app has required VoIP permissions
   Future<bool> hasPermissions() {
     throw UnimplementedError('hasPermissions() has not been implemented.');
@@ -37,47 +33,15 @@ abstract class VCallkitPluginPlatform extends PlatformInterface {
     throw UnimplementedError('requestPermissions() has not been implemented.');
   }
 
-  /// Shows an incoming call with the provided call data
-  Future<bool> showIncomingCall(Map<String, dynamic> callData) {
-    throw UnimplementedError('showIncomingCall() has not been implemented.');
-  }
-
   /// Shows an incoming call with custom configuration
   Future<bool> showIncomingCallWithConfig(Map<String, dynamic> data) {
     throw UnimplementedError(
         'showIncomingCallWithConfig() has not been implemented.');
   }
 
-  /// Sets global UI configuration for all call screens
-  Future<bool> setUIConfiguration(Map<String, dynamic> config) {
-    throw UnimplementedError('setUIConfiguration() has not been implemented.');
-  }
-
-  /// Forces display of hangup notification for testing
-  Future<bool> forceShowHangupNotification(Map<String, dynamic> data) {
-    throw UnimplementedError(
-        'forceShowHangupNotification() has not been implemented.');
-  }
-
-  /// Gets debug information about the call manager
-  Future<Map<String, dynamic>> getCallManagerDebugInfo() {
-    throw UnimplementedError(
-        'getCallManagerDebugInfo() has not been implemented.');
-  }
-
-  /// Ends the current call
-  Future<bool> endCall([String? callId]) {
-    throw UnimplementedError('endCall() has not been implemented.');
-  }
-
   /// Answers the current call
   Future<bool> answerCall([String? callId]) {
     throw UnimplementedError('answerCall() has not been implemented.');
-  }
-
-  /// Rejects the current call
-  Future<bool> rejectCall([String? callId]) {
-    throw UnimplementedError('rejectCall() has not been implemented.');
   }
 
   /// Checks if there's an active call
@@ -88,52 +52,6 @@ abstract class VCallkitPluginPlatform extends PlatformInterface {
   /// Gets active call data
   Future<Map<String, dynamic>?> getActiveCallData() {
     throw UnimplementedError('getActiveCallData() has not been implemented.');
-  }
-
-  /// Sets a custom ringtone for incoming calls
-  Future<bool> setCustomRingtone(String? ringtoneUri) {
-    throw UnimplementedError('setCustomRingtone() has not been implemented.');
-  }
-
-  /// Gets available system ringtones
-  Future<List<Map<String, dynamic>>> getSystemRingtones() {
-    throw UnimplementedError('getSystemRingtones() has not been implemented.');
-  }
-
-  /// Checks if battery optimization is ignored
-  Future<bool> checkBatteryOptimization() {
-    throw UnimplementedError(
-        'checkBatteryOptimization() has not been implemented.');
-  }
-
-  /// Requests to ignore battery optimization
-  Future<bool> requestBatteryOptimization() {
-    throw UnimplementedError(
-        'requestBatteryOptimization() has not been implemented.');
-  }
-
-  /// Gets device manufacturer
-  Future<String> getDeviceManufacturer() {
-    throw UnimplementedError(
-        'getDeviceManufacturer() has not been implemented.');
-  }
-
-  /// Gets the last call action that launched the app
-  Future<Map<String, dynamic>?> getLastCallActionLaunch() {
-    throw UnimplementedError(
-        'getLastCallActionLaunch() has not been implemented.');
-  }
-
-  /// Checks if the app was launched from a call notification action
-  Future<bool> hasCallActionLaunchData() {
-    throw UnimplementedError(
-        'hasCallActionLaunchData() has not been implemented.');
-  }
-
-  /// Clears any stored call action launch data
-  Future<bool> clearCallActionLaunchData() {
-    throw UnimplementedError(
-        'clearCallActionLaunchData() has not been implemented.');
   }
 
   /// Starts persistent notification for outgoing calls
