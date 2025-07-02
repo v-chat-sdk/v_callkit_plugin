@@ -25,6 +25,11 @@ void main() async {
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
+  // Print FCM token for debugging
+  final fcmToken = await FirebaseMessaging.instance.getToken();
+  // ignore: avoid_print
+  print('FCM Token: ' + (fcmToken ?? 'null'));
+
   // Set the background message handler
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 

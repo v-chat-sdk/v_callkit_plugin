@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:developer' as developer;
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:v_callkit_plugin/models/call_configuration.dart';
 import 'package:v_callkit_plugin/v_callkit_plugin.dart';
 import 'package:v_callkit_plugin/models/call_data.dart';
 
@@ -63,12 +64,6 @@ class FirebaseBackgroundHandler {
         name: 'FirebaseBackgroundHandler',
       );
 
-      // Log message data for debugging
-      developer.log(
-        'Message data: ${message.data}',
-        name: 'FirebaseBackgroundHandler',
-      );
-
       // Show fake incoming call
       await _showFakeCall(message);
 
@@ -120,7 +115,14 @@ class FirebaseBackgroundHandler {
       );
 
       // Show the incoming call
-      final success = await _plugin.showIncomingCall(callData: callData);
+      final success = await _plugin.showIncomingCall(
+        callData: callData,
+        configuration: VCallkitCallConfiguration(
+          answerButtonText: "ANswer",
+          enableVibration: true,
+          showCallType: true,
+        ),
+      );
 
       if (success) {
         developer.log(

@@ -139,15 +139,12 @@ class CallActionReceiver : BroadcastReceiver() {
     
     private fun dismissIncomingCallNotification(context: Context) {
         try {
-            // Stop all call sounds first
-            stopCallSounds(context)
-            
-            // Dismiss the incoming call notification
+            // Dismiss the incoming call notification (system automatically stops ringtone)
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) 
                 as android.app.NotificationManager
             notificationManager.cancel(VCallkitPlugin.CALL_NOTIFICATION_ID)
             
-            Log.d(TAG, "Incoming call notification dismissed")
+            Log.d(TAG, "Incoming call notification dismissed - system automatically stopped ringtone")
         } catch (e: Exception) {
             Log.e(TAG, "Error dismissing incoming call notification: ${e.message}")
         }
@@ -155,10 +152,7 @@ class CallActionReceiver : BroadcastReceiver() {
     
     private fun dismissAllCallNotifications(context: Context) {
         try {
-            // Stop all call sounds first
-            stopCallSounds(context)
-            
-            // Dismiss all call-related notifications
+            // Dismiss all call-related notifications (system automatically stops ringtone)
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) 
                 as android.app.NotificationManager
             notificationManager.cancel(VCallkitPlugin.CALL_NOTIFICATION_ID)
@@ -172,26 +166,14 @@ class CallActionReceiver : BroadcastReceiver() {
             // Stop call duration timer through plugin instance
             VCallkitPlugin.pluginInstance?.stopCallTimer()
             
-            Log.d(TAG, "All call notifications dismissed")
+            Log.d(TAG, "All call notifications dismissed - system automatically stopped ringtone")
         } catch (e: Exception) {
             Log.e(TAG, "Error dismissing call notifications: ${e.message}")
         }
     }
     
-    private fun stopCallSounds(context: Context) {
-        try {
-            // Stop sounds through plugin instance if available
-            VCallkitPlugin.stopCallSoundsStatic()
-            
-            // Fallback: stop vibration directly in case plugin instance is not available
-            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
-            vibrator.cancel()
-            
-            Log.d(TAG, "Call sounds stopped")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error stopping call sounds: ${e.message}")
-        }
-    }
+    // Note: stopCallSounds method removed - system now manages ringtone lifecycle automatically
+    // Notification dismissal automatically stops ringtone
     
     private fun showOngoingCallNotification(context: Context, callId: String) {
         try {

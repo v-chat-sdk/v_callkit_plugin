@@ -236,12 +236,10 @@ class IncomingCallActivity : Activity() {
         callData?.let { data ->
             Log.d(TAG, "Handling answer for call: ${data.id}")
             
-            // Stop ringtone immediately when user answers
-            VCallkitPlugin.stopCallSoundsStatic()
-            
-            // Dismiss the incoming call notification
+            // Dismiss the incoming call notification (system automatically stops ringtone)
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.cancel(CallConstants.CALL_NOTIFICATION_ID)
+            Log.d(TAG, "Notification dismissed - system automatically stopped ringtone")
             
             // Use CallManager to handle answered call
             val callManager = CallManager.getInstance(this)
@@ -262,12 +260,10 @@ class IncomingCallActivity : Activity() {
         callData?.let { data ->
             Log.d(TAG, "Handling decline for call: ${data.id}")
             
-            // Stop ringtone immediately when user declines
-            VCallkitPlugin.stopCallSoundsStatic()
-            
-            // Dismiss the incoming call notification completely
+            // Dismiss the incoming call notification completely (system automatically stops ringtone)
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.cancel(CallConstants.CALL_NOTIFICATION_ID)
+            Log.d(TAG, "Notification dismissed - system automatically stopped ringtone")
             
             // Use CallManager to handle declined call
             val callManager = CallManager.getInstance(this)
@@ -327,8 +323,8 @@ class IncomingCallActivity : Activity() {
             Log.d(TAG, "Wake lock released")
         }
         
-        // Stop any ongoing sounds
-        VCallkitPlugin.stopCallSoundsStatic()
+        // No need to stop sounds manually - system handles ringtone lifecycle automatically
+        Log.d(TAG, "System manages ringtone lifecycle - no manual cleanup needed")
     }
     
     override fun onBackPressed() {

@@ -18,9 +18,8 @@ import android.graphics.Rect
 import android.graphics.drawable.Icon
 import android.media.AudioAttributes
 import android.media.AudioManager
-import android.media.MediaPlayer
-import android.media.Ringtone
 import android.media.RingtoneManager
+// Note: MediaPlayer and Ringtone imports removed - using system-managed notification ringtone
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -102,12 +101,9 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         }
         
         /**
-         * Static method to stop call sounds from anywhere (like BroadcastReceiver)
+         * Note: stopCallSoundsStatic removed - system now manages ringtone lifecycle automatically
+         * Notification dismissal automatically stops ringtone
          */
-        @JvmStatic
-        fun stopCallSoundsStatic() {
-            pluginInstance?.stopCallSounds()
-        }
         
         /**
          * Static method to set call action launch data when app is launched from notification
@@ -196,9 +192,8 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
     private lateinit var vibrator: Vibrator
     private lateinit var audioManager: AudioManager
     private lateinit var powerManager: PowerManager
-    private var ringtone: Ringtone? = null
-    private var mediaPlayer: MediaPlayer? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    // Note: ringtone and mediaPlayer removed - system handles ringtone automatically
     
     // Call duration tracking
     private var callStartTime: Long = 0
@@ -271,22 +266,26 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val ringtoneUri = customRingtoneUri ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
             
-            // Incoming calls channel (high priority with controlled sound)
+            // Incoming calls channel with SYSTEM-MANAGED ringtone
             val incomingChannel = NotificationChannel(
                 CALL_NOTIFICATION_CHANNEL_ID,
                 "Incoming Calls",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Notifications for incoming VoIP calls - respects system silent mode and Do Not Disturb settings"
+                description = "Notifications for incoming VoIP calls - system managed audio"
                 setShowBadge(false)
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 1000, 500, 1000)
                 
-                // CRITICAL FIX: Disable notification channel sound for ALL devices to prevent double ringtone
-                // We handle ringtone playback manually for better control and consistent behavior
-                setSound(null, null)
-                Log.d(TAG, "Notification channel sound disabled for ALL devices to prevent double ringtone")
+                // USE SYSTEM RINGTONE - automatic lifecycle management
+                setSound(ringtoneUri, AudioAttributes.Builder()
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                    .setLegacyStreamType(AudioManager.STREAM_RING)
+                    .build())
+                
+                Log.d(TAG, "Notification channel using system-managed ringtone for automatic lifecycle")
                 
                 // Respect Do Not Disturb settings - let user control this in system settings
                 setBypassDnd(false)
@@ -305,12 +304,11 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
                 enableLights(false)
                 setSound(null, null) // No sound for ongoing calls
                 setBypassDnd(false) // Don't need to bypass DND for ongoing calls
-                // Note: Android automatically makes foreground service notifications non-dismissible
             }
             
             notificationManager.createNotificationChannel(incomingChannel)
             notificationManager.createNotificationChannel(ongoingChannel)
-            Log.d(TAG, "Notification channels created: incoming and ongoing calls with unified sound handling")
+            Log.d(TAG, "Notification channels created: system-managed ringtone for incoming, silent for ongoing")
         }
     }
     
@@ -352,9 +350,8 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
             // Acquire wake lock for call
             acquireCallWakeLock()
             
-            // Start manual ringtone playback for better control across all devices
-            // This ensures consistent behavior and prevents double ringtone on custom ROMs
-            startRingtonePlayback()
+            // System notification handles ringtone automatically - no manual management needed
+            Log.d(TAG, "Using system-managed ringtone - automatic start/stop with notification lifecycle")
             
             // Load avatar asynchronously and show notification
             loadAvatarAsync(callData) { avatarIcon ->
@@ -370,7 +367,6 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         } catch (e: Exception) {
             Log.e(TAG, "Error showing call notification: ${e.message}")
             releaseCallWakeLock()
-            stopRingtonePlayback()
             result.error("NOTIFICATION_ERROR", "Failed to show call notification: ${e.message}", null)
         }
     }
@@ -814,7 +810,6 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
     private fun dismissCallNotification() {
         notificationManager.cancel(CALL_NOTIFICATION_ID)
         notificationManager.cancel(ONGOING_CALL_NOTIFICATION_ID)
-        stopCallSounds()
         stopCallDurationTimer()
         
         // Stop foreground service if running
@@ -824,13 +819,13 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
     }
     
     /**
-     * Stop ringtone and vibration without dismissing notification
-     * Used when call is answered (notification stays but sounds stop)
+     * Note: stopCallSounds removed - system now manages ringtone automatically
+     * Only need to handle vibration and wake lock cleanup manually
      */
-    fun stopCallSounds() {
+    private fun stopCallVibrationAndWakeLock() {
         stopCallVibration()
-        stopRingtonePlayback()
         releaseCallWakeLock()
+        Log.d(TAG, "Stopped vibration and released wake lock - ringtone handled by system")
     }
     
     private fun startCallVibration() {
@@ -988,9 +983,9 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         
         Log.d(TAG, "Handling answer call from Flutter for call ID: $callId")
         
-        // Stop sounds and dismiss incoming call notification
-        stopCallSounds()
+        // Dismiss incoming call notification (system automatically stops ringtone)
         notificationManager.cancel(CALL_NOTIFICATION_ID)
+        Log.d(TAG, "Notification dismissed - system automatically stopped ringtone")
         
         if (CallConnectionManager.answerCall(callId)) {
             // NOTE: No automatic ongoing notification - controlled from Flutter side
@@ -1043,7 +1038,7 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         channel.setMethodCallHandler(null)
         methodChannel = null
         pluginInstance = null
-        stopRingtonePlayback()
+        // Note: Removed stopRingtonePlayback() - system handles ringtone automatically
         releaseCallWakeLock()
         stopCallDurationTimer()
     }
@@ -1074,72 +1069,10 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
     
     // Helper methods for system audio state checking
     
-    /**
-     * Checks if ringtone should be played based on system settings and user configuration
-     * Respects silent mode and Do Not Disturb settings
-     */
-    private fun shouldPlayRingtone(): Boolean {
-        try {
-            // Check if ringtone is disabled in UI configuration
-            val enableRingtone = getUIConfigValue("enableRingtone", true) as? Boolean ?: true
-            if (!enableRingtone) {
-                Log.d(TAG, "Ringtone blocked: Disabled in UI configuration")
-                return false
-            }
-            
-            val ringerMode = audioManager.ringerMode
-            
-            // Don't play ringtone if phone is in silent mode
-            if (ringerMode == AudioManager.RINGER_MODE_SILENT) {
-                Log.d(TAG, "Ringtone blocked: Phone is in silent mode")
-                return false
-            }
-            
-            // Check Do Not Disturb status (API 23+)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                val interruptionFilter = notificationManager.currentInterruptionFilter
-                
-                // Block ringtone in strict DND modes
-                if (interruptionFilter == NotificationManager.INTERRUPTION_FILTER_NONE) {
-                    Log.d(TAG, "Ringtone blocked: Do Not Disturb - Total silence mode")
-                    return false
-                }
-                
-                if (interruptionFilter == NotificationManager.INTERRUPTION_FILTER_ALARMS) {
-                    Log.d(TAG, "Ringtone blocked: Do Not Disturb - Alarms only mode")
-                    return false
-                }
-                
-                // In priority mode, allow if calls are permitted or if we can bypass DND
-                if (interruptionFilter == NotificationManager.INTERRUPTION_FILTER_PRIORITY) {
-                    // Check if we have DND policy access to determine if calls are allowed
-                    if (notificationManager.isNotificationPolicyAccessGranted) {
-                        val policy = notificationManager.notificationPolicy
-                        val callsAllowed = (policy.priorityCategories and NotificationManager.Policy.PRIORITY_CATEGORY_CALLS) != 0
-                        if (!callsAllowed) {
-                            Log.d(TAG, "Ringtone blocked: Do Not Disturb - Priority mode without calls")
-                            return false
-                        }
-                    } else {
-                        Log.d(TAG, "Ringtone blocked: Do Not Disturb - Priority mode (no policy access)")
-                        return false
-                    }
-                }
-            }
-            
-            // Check if ringtone volume is zero
-            val ringtoneVolume = audioManager.getStreamVolume(AudioManager.STREAM_RING)
-            if (ringtoneVolume == 0) {
-                Log.d(TAG, "Ringtone blocked: Ringtone volume is set to zero")
-                return false
-            }
-            
-            return true
-        } catch (e: Exception) {
-            Log.e(TAG, "Error checking ringtone conditions: ${e.message}")
-            return false
-        }
-    }
+    // Note: shouldPlayRingtone method removed - system notification automatically respects:
+    // - Silent mode and Do Not Disturb settings
+    // - Ringtone volume levels
+    // - User configuration for enableRingtone (handled via notification channel creation)
     
     /**
      * Checks if vibration should be activated based on system settings and user configuration
@@ -1299,80 +1232,8 @@ class VCallkitPlugin: FlutterPlugin, MethodCallHandler {
         wakeLock = null
     }
     
-    // Enhanced ringtone playback for consistent behavior across all devices
-    private fun startRingtonePlayback() {
-        try {
-            // Check if ringtone should be played based on system settings
-            if (!shouldPlayRingtone()) {
-                Log.d(TAG, "Ringtone playback skipped due to system settings (silent mode or DND)")
-                return
-            }
-            
-            // Stop any existing playback
-            stopRingtonePlayback()
-            
-            val ringtoneUri = customRingtoneUri ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-            
-            // Use MediaPlayer for ALL devices for consistent behavior and better control
-            mediaPlayer = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                        .setLegacyStreamType(AudioManager.STREAM_RING)
-                        .build()
-                )
-                
-                // Set data source and prepare
-                setDataSource(context, ringtoneUri)
-                isLooping = true
-                
-                // Respect current system volume level - don't override user settings
-                prepare()
-                start()
-                
-                Log.d(TAG, "MediaPlayer ringtone started for ${Build.MANUFACTURER} API ${Build.VERSION.SDK_INT} (respecting system volume)")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error starting ringtone: ${e.message}")
-            // Fallback to standard Ringtone if MediaPlayer fails
-            try {
-                val ringtoneUri = customRingtoneUri ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-                ringtone = RingtoneManager.getRingtone(context, ringtoneUri).apply {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                        isLooping = true
-                    }
-                    play()
-                    Log.d(TAG, "Fallback standard ringtone started (respecting system volume)")
-                }
-            } catch (fallbackException: Exception) {
-                Log.e(TAG, "Both MediaPlayer and standard Ringtone failed: ${fallbackException.message}")
-            }
-        }
-    }
-    
-    private fun stopRingtonePlayback() {
-        try {
-            mediaPlayer?.let {
-                if (it.isPlaying) {
-                    it.stop()
-                }
-                it.release()
-            }
-            mediaPlayer = null
-            
-            ringtone?.let {
-                if (it.isPlaying) {
-                    it.stop()
-                }
-            }
-            ringtone = null
-            
-            Log.d(TAG, "Ringtone playback stopped")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error stopping ringtone: ${e.message}")
-        }
-    }
+    // Note: Manual ringtone management removed - now using system-managed notification ringtone
+    // System automatically handles ringtone lifecycle when notification is shown/dismissed
     
     /**
      * Shows an ongoing call notification after call is answered
