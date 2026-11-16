@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:v_callkit_plugin/models/call_data.dart';
+
 import '../utils/app_colors.dart';
 
 class CallStatusWidget extends StatelessWidget {
@@ -94,9 +95,8 @@ class CallStatusWidget extends StatelessWidget {
         children: [
           Text(
             'Active Call Details',
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.titleSmall
+                ?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           _buildStatusRow('Caller', callData.callerName),

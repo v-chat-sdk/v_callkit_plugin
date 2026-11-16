@@ -1,9 +1,11 @@
 import 'dart:math';
 import 'dart:developer' as developer;
+
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:v_callkit_plugin/v_callkit_plugin.dart';
 import 'package:v_callkit_plugin/models/call_data.dart';
 import 'package:v_callkit_plugin/models/call_configuration.dart';
+
 import '../models/sample_caller.dart';
 import 'event_logger.dart';
 
@@ -65,8 +67,7 @@ class CallService {
 
       final success = await _plugin.showIncomingCall(
         callData: callData,
-        configuration: VCallkitCallConfiguration(
-        ),
+        configuration: VCallkitCallConfiguration(),
       );
 
       if (success) {

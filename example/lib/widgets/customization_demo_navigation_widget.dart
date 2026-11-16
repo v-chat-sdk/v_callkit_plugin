@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
+
 import '../screens/customization_demo_screen.dart';
 import '../utils/app_colors.dart';
 

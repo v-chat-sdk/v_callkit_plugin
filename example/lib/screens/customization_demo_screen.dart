@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:v_callkit_plugin/v_callkit_plugin.dart';
 import 'package:v_callkit_plugin/models/call_data.dart';
 import 'package:v_callkit_plugin/models/call_configuration.dart';
+
 import '../models/sample_caller.dart';
 import '../widgets/error_dialog_widget.dart';
 import '../constants/app_themes.dart';
@@ -264,7 +265,7 @@ class _CustomizationDemoScreenState extends State<CustomizationDemoScreen> {
 
   Widget _buildLanguageSelector() {
     return DropdownButtonFormField<String>(
-      value: _selectedLanguage,
+      initialValue: _selectedLanguage,
       decoration: InputDecoration(
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
@@ -382,7 +383,11 @@ class _CustomizationDemoScreenState extends State<CustomizationDemoScreen> {
             ],
           ),
         ),
-        Switch(value: value, onChanged: onChanged, activeColor: Colors.blue),
+        Switch(
+          value: value,
+          onChanged: onChanged,
+          activeThumbColor: Colors.blue,
+        ),
       ],
     );
   }

@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
+
 import '../utils/app_colors.dart';
 
 class EventLogWidget extends StatelessWidget {
@@ -64,16 +65,14 @@ class EventLogWidget extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'No events yet',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
+            style: Theme.of(context).textTheme.bodyLarge
+                ?.copyWith(color: Colors.grey[600]),
           ),
           const SizedBox(height: 4),
           Text(
             'Call events will appear here',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: Colors.grey[500]),
           ),
         ],
       ),

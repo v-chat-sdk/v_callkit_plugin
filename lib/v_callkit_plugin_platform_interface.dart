@@ -36,7 +36,8 @@ abstract class VCallkitPluginPlatform extends PlatformInterface {
   /// Shows an incoming call with custom configuration
   Future<bool> showIncomingCallWithConfig(Map<String, dynamic> data) {
     throw UnimplementedError(
-        'showIncomingCallWithConfig() has not been implemented.');
+      'showIncomingCallWithConfig() has not been implemented.',
+    );
   }
 
   /// Answers the current call
@@ -57,12 +58,14 @@ abstract class VCallkitPluginPlatform extends PlatformInterface {
   /// Starts persistent notification for outgoing calls
   Future<bool> startOutgoingCallNotification(Map<String, dynamic> callData) {
     throw UnimplementedError(
-        'startOutgoingCallNotification() has not been implemented.');
+      'startOutgoingCallNotification() has not been implemented.',
+    );
   }
 
   /// Stops the call foreground service
   Future<bool> stopCallForegroundService() {
     throw UnimplementedError(
-        'stopCallForegroundService() has not been implemented.');
+      'stopCallForegroundService() has not been implemented.',
+    );
   }
 }

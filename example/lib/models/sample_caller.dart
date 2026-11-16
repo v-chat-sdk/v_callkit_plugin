@@ -11,8 +11,6 @@ class SampleCaller {
     required this.avatar,
   });
 
-
-
   static const List<SampleCaller> sampleCallers = [
     SampleCaller(
       name: 'John Doe',
@@ -65,11 +63,7 @@ class SampleCaller {
   /// For backward compatibility
   String get number => phoneNumber;
 
-  SampleCaller copyWith({
-    String? name,
-    String? phoneNumber,
-    String? avatar,
-  }) {
+  SampleCaller copyWith({String? name, String? phoneNumber, String? avatar}) {
     return SampleCaller(
       name: name ?? this.name,
       phoneNumber: phoneNumber ?? this.phoneNumber,

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+
 import 'dart:async';
 
 import 'v_callkit_plugin_platform_interface.dart';
@@ -74,8 +75,9 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
 
   @override
   Future<bool> requestPermissions() async {
-    final granted =
-        await methodChannel.invokeMethod<bool>('requestPermissions');
+    final granted = await methodChannel.invokeMethod<bool>(
+      'requestPermissions',
+    );
     return granted ?? false;
   }
 
@@ -113,7 +115,8 @@ class MethodChannelVCallkitPlugin extends VCallkitPluginPlatform {
 
   @override
   Future<bool> startOutgoingCallNotification(
-      Map<String, dynamic> callData) async {
+    Map<String, dynamic> callData,
+  ) async {
     final success = await methodChannel.invokeMethod<bool>(
       'startOutgoingCallNotification',
       callData,

@@ -155,13 +155,13 @@ class VCallkitCallConfiguration {
       // Accessibility
       answerButtonContentDescription:
           map['answerButtonContentDescription']?.toString() ??
-              'Answer call button',
+          'Answer call button',
       declineButtonContentDescription:
           map['declineButtonContentDescription']?.toString() ??
-              'Decline call button',
+          'Decline call button',
       hangupButtonContentDescription:
           map['hangupButtonContentDescription']?.toString() ??
-              'Hangup call button',
+          'Hangup call button',
     );
   }
 
@@ -203,8 +203,9 @@ class VCallkitCallConfiguration {
     if (primaryColor != null) map['primaryColor'] = primaryColor;
     if (accentColor != null) map['accentColor'] = accentColor;
     if (textColor != null) map['textColor'] = textColor;
-    if (buttonBackgroundColor != null)
+    if (buttonBackgroundColor != null) {
       map['buttonBackgroundColor'] = buttonBackgroundColor;
+    }
     if (buttonTextColor != null) map['buttonTextColor'] = buttonTextColor;
     if (iconColor != null) map['iconColor'] = iconColor;
     if (borderRadius != null) map['borderRadius'] = borderRadius;
@@ -356,7 +357,8 @@ class VCallkitCallConfiguration {
       // Accessibility
       answerButtonContentDescription:
           answerButtonContentDescription ?? this.answerButtonContentDescription,
-      declineButtonContentDescription: declineButtonContentDescription ??
+      declineButtonContentDescription:
+          declineButtonContentDescription ??
           this.declineButtonContentDescription,
       hangupButtonContentDescription:
           hangupButtonContentDescription ?? this.hangupButtonContentDescription,

@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+
 import 'screens/home_screen.dart';
 import 'utils/app_colors.dart';
 import 'services/firebase_background_handler.dart';
@@ -28,7 +29,7 @@ void main() async {
   // Print FCM token for debugging
   final fcmToken = await FirebaseMessaging.instance.getToken();
   // ignore: avoid_print
-  print('FCM Token: ' + (fcmToken ?? 'null'));
+  print('FCM Token: ${fcmToken ?? 'null'}');
 
   // Set the background message handler
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);

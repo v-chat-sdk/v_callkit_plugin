@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:v_callkit_plugin/v_callkit_plugin.dart';
 import 'package:v_callkit_plugin/models/call_data.dart';
 
@@ -59,8 +59,7 @@ class _OutgoingCallDemoWidgetState extends State<OutgoingCallDemoWidget> {
       if (success) {
         setState(() {
           _isOutgoingCallActive = true;
-          _statusMessage =
-              'Outgoing call notification active! Check your notification panel.';
+          _statusMessage = 'Outgoing call notification active! Check your notification panel.';
         });
 
         _showSnackBar('Outgoing call notification started', Colors.green);

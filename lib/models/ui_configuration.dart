@@ -143,13 +143,13 @@ class VCallkitUIConfiguration {
       // Accessibility Settings
       answerButtonContentDescription:
           map['answerButtonContentDescription'] as String? ??
-              'Answer call button',
+          'Answer call button',
       declineButtonContentDescription:
           map['declineButtonContentDescription'] as String? ??
-              'Decline call button',
+          'Decline call button',
       hangupButtonContentDescription:
           map['hangupButtonContentDescription'] as String? ??
-              'Hangup call button',
+          'Hangup call button',
     );
   }
 
@@ -184,23 +184,28 @@ class VCallkitUIConfiguration {
     if (backgroundColor != null) map['backgroundColor'] = backgroundColor;
     if (accentColor != null) map['accentColor'] = accentColor;
     if (textColor != null) map['textColor'] = textColor;
-    if (secondaryTextColor != null)
+    if (secondaryTextColor != null) {
       map['secondaryTextColor'] = secondaryTextColor;
+    }
     if (buttonColor != null) map['buttonColor'] = buttonColor;
-    if (declineButtonColor != null)
+    if (declineButtonColor != null) {
       map['declineButtonColor'] = declineButtonColor;
+    }
     if (answerButtonColor != null) map['answerButtonColor'] = answerButtonColor;
 
     // Add optional text translations only if they're not null
     if (answerButtonText != null) map['answerButtonText'] = answerButtonText;
     if (declineButtonText != null) map['declineButtonText'] = declineButtonText;
     if (hangupButtonText != null) map['hangupButtonText'] = hangupButtonText;
-    if (incomingVoiceCallText != null)
+    if (incomingVoiceCallText != null) {
       map['incomingVoiceCallText'] = incomingVoiceCallText;
-    if (incomingVideoCallText != null)
+    }
+    if (incomingVideoCallText != null) {
       map['incomingVideoCallText'] = incomingVideoCallText;
-    if (callInProgressText != null)
+    }
+    if (callInProgressText != null) {
       map['callInProgressText'] = callInProgressText;
+    }
     if (tapToReturnText != null) map['tapToReturnText'] = tapToReturnText;
     if (unknownCallerText != null) map['unknownCallerText'] = unknownCallerText;
     if (videoCallText != null) map['videoCallText'] = videoCallText;
@@ -308,7 +313,8 @@ class VCallkitUIConfiguration {
       // Accessibility Settings
       answerButtonContentDescription:
           answerButtonContentDescription ?? this.answerButtonContentDescription,
-      declineButtonContentDescription: declineButtonContentDescription ??
+      declineButtonContentDescription:
+          declineButtonContentDescription ??
           this.declineButtonContentDescription,
       hangupButtonContentDescription:
           hangupButtonContentDescription ?? this.hangupButtonContentDescription,
@@ -364,19 +370,19 @@ class VCallkitUIConfiguration {
 
   /// Predefined Dark Theme
   static VCallkitUIConfiguration get darkTheme => const VCallkitUIConfiguration(
-        backgroundColor: '#1a1a1a',
-        accentColor: '#4CAF50',
-        textColor: '#ffffff',
-        secondaryTextColor: '#b0b0b0',
-        answerButtonColor: '#4CAF50',
-        declineButtonColor: '#f44336',
-        answerButtonText: 'Answer',
-        declineButtonText: 'Decline',
-        hangupButtonText: 'Hang Up',
-        incomingVoiceCallText: 'Incoming voice call',
-        incomingVideoCallText: 'Incoming video call',
-        tapToReturnText: 'Tap to return to call',
-      );
+    backgroundColor: '#1a1a1a',
+    accentColor: '#4CAF50',
+    textColor: '#ffffff',
+    secondaryTextColor: '#b0b0b0',
+    answerButtonColor: '#4CAF50',
+    declineButtonColor: '#f44336',
+    answerButtonText: 'Answer',
+    declineButtonText: 'Decline',
+    hangupButtonText: 'Hang Up',
+    incomingVoiceCallText: 'Incoming voice call',
+    incomingVideoCallText: 'Incoming video call',
+    tapToReturnText: 'Tap to return to call',
+  );
 
   /// Predefined Light Theme
   static VCallkitUIConfiguration get lightTheme =>

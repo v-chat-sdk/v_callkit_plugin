@@ -79,9 +79,7 @@ class VCallkitPlugin {
     required CallData callData,
     VCallkitCallConfiguration? configuration,
   }) {
-    final data = <String, dynamic>{
-      'callData': callData.toMap(),
-    };
+    final data = <String, dynamic>{'callData': callData.toMap()};
 
     if (configuration != null) {
       data['config'] = configuration.toMap();

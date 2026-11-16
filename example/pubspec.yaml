@@ -5,7 +5,8 @@ description: "Demonstrates how to use the v_callkit_plugin plugin."
 publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
 environment:
-  sdk: ^3.8.1
+  sdk: ^3.14.0
+  flutter: '>=3.50.0'
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -14,6 +15,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  material_ui: ^1.11.0
   flutter:
     sdk: flutter
 

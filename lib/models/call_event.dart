@@ -11,13 +11,7 @@ enum CallState {
 }
 
 /// Represents different types of call actions (simplified - removed hold and mute)
-enum CallAction {
-  answered,
-  rejected,
-  ended,
-  aborted,
-  stateChanged,
-}
+enum CallAction { answered, rejected, ended, aborted, stateChanged }
 
 /// Base class for all call events
 abstract class CallEvent {

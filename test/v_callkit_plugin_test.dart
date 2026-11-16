@@ -56,13 +56,17 @@ void main() {
       expect(await mockPlatform.getActiveCallData(), null);
 
       // Test foreground service methods
-      expect(await mockPlatform.startOutgoingCallNotification({'test': 'data'}),
-          true);
+      expect(
+        await mockPlatform.startOutgoingCallNotification({'test': 'data'}),
+        true,
+      );
       expect(await mockPlatform.stopCallForegroundService(), true);
 
       // Test incoming call methods
-      expect(await mockPlatform.showIncomingCallWithConfig({'test': 'config'}),
-          true);
+      expect(
+        await mockPlatform.showIncomingCallWithConfig({'test': 'config'}),
+        true,
+      );
     });
   });
 

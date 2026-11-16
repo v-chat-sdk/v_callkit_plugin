@@ -10,31 +10,28 @@ void main() {
 
   setUp(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-      channel,
-      (MethodCall methodCall) async {
-        switch (methodCall.method) {
-          case 'hasPermissions':
-            return true;
-          case 'requestPermissions':
-            return true;
-          case 'answerCall':
-            return true;
-          case 'isCallActive':
-            return false;
-          case 'getActiveCallData':
-            return null;
-          case 'showIncomingCallWithConfig':
-            return true;
-          case 'startOutgoingCallNotification':
-            return true;
-          case 'stopCallForegroundService':
-            return true;
-          default:
-            return null;
-        }
-      },
-    );
+        .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+          switch (methodCall.method) {
+            case 'hasPermissions':
+              return true;
+            case 'requestPermissions':
+              return true;
+            case 'answerCall':
+              return true;
+            case 'isCallActive':
+              return false;
+            case 'getActiveCallData':
+              return null;
+            case 'showIncomingCallWithConfig':
+              return true;
+            case 'startOutgoingCallNotification':
+              return true;
+            case 'stopCallForegroundService':
+              return true;
+            default:
+              return null;
+          }
+        });
   });
 
   tearDown(() {
@@ -68,7 +65,9 @@ void main() {
 
   test('startOutgoingCallNotification', () async {
     expect(
-        await platform.startOutgoingCallNotification({'test': 'data'}), true);
+      await platform.startOutgoingCallNotification({'test': 'data'}),
+      true,
+    );
   });
 
   test('stopCallForegroundService', () async {
